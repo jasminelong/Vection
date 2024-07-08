@@ -14,7 +14,7 @@ public class CylinderGenerator : MonoBehaviour
 
     public Vector3 cylinderBaseCenter = Vector3.zero; // 圆柱底部的中心位置设为原点
     public Vector3 cylinderTopCenter; // 圆柱顶部的中心位置
-
+    public Material arrowMaterial;//红色预设材质
 
     void Start()
     {
@@ -59,11 +59,12 @@ public class CylinderGenerator : MonoBehaviour
             // 设置小圆点预制体的缩放
             dotTransform.localScale = new Vector3(scaleFactor, scaleFactor, scaleFactor);
         }
+
         // 创建红色顶点
-         Color newColor = Color.red;
-        GameObject redVertex = Instantiate(dotPrefab, cylinderTopCenter, Quaternion.identity);
-        redVertex.GetComponent<Renderer>().material.color = newColor;
-        redVertex.transform.SetParent(transform);
+      /*  GameObject redVertex = Instantiate(dotPrefab, cylinderTopCenter, Quaternion.identity);
+        redVertex.GetComponent<Renderer>().materials = new Material[] { arrowMaterial };
+        redVertex.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f);
+        redVertex.transform.SetParent(transform);*/
 
         //随机生成小白点
         for (int i = 0; i < numDots; i++)

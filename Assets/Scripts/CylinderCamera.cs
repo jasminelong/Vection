@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System;
 
 public class CylinderCamera : MonoBehaviour
 {
@@ -17,14 +18,13 @@ public class CylinderCamera : MonoBehaviour
     public Vector3 cylinderTopCenter; // 圆柱顶部的中心位置
     public float cameraSpeed = 1f; // 摄像机沿圆柱轴线移动的速度，m/s
     public RawImage displayImage; // 用于显示拍摄图像的UI组件
-    public float captureInterval = 1f; // 拍摄间隔距离，m
+    public float fps = 60f;//其他的fps
     public RawImage preImageRawImage;
     public RawImage nextImageRawImage;
 
+    private float captureIntervalDistance; // 拍摄间隔距离，m
     private GameObject canvas;
     private Transform cameraTransform; // 主摄像机的Transform
-    private float cameraCurrentZPosition = 0f; // 摄像机当前的Z轴位置
-    private float nextCaptureZPosition = 0f; // 下次拍照的Z轴位置
     private Transform capturedImageTransform;
     private Transform userImageTransform;
     private Transform preImageTransform;
@@ -35,11 +35,17 @@ public class CylinderCamera : MonoBehaviour
 
     private List<(Texture2D, Vector3)> capturedImages; // 存储图片和位置的列表
 
-
+    private float updateInterval; // 更新间隔，单位秒
+    private float updateTimer = 0f;
 
     // Start is called before the first frame update
     void Start()
     {
+        // 关闭垂直同步
+        QualitySettings.vSyncCount = 0;
+        // 设置目标帧率为60帧每秒
+        Application.targetFrameRate = 60;
+
         userCamera.transform.position = this.GetComponent<CylinderGenerator>().cylinderBaseCenter;// 相机初始位置设为圆柱底部中心
         cameraTransform = userCamera.transform; // 获取主摄像机的Transform
         cylinderHeight = this.GetComponent<CylinderGenerator>().cylinderHeight;
@@ -47,6 +53,10 @@ public class CylinderCamera : MonoBehaviour
 
         captureCamera.enabled = false; // 初始化时禁用捕获摄像机
         capturedImages = new List<(Texture2D, Vector3)>();
+
+        updateInterval = 1 / fps;//计算每一帧显示的间隔时间
+        captureIntervalDistance = cameraSpeed / fps;//计算每帧直接的间隔距离
+
         // 在 Canvas 中查找指定名称的子对象
         canvas = GameObject.Find("Canvas");
         userImageTransform = canvas.transform.Find("UserImage");
@@ -65,6 +75,7 @@ public class CylinderCamera : MonoBehaviour
         capturedImageRawImage.enabled = false;
         preImageRawImage.enabled = false;
         nextImageRawImage.enabled = false;
+
         switch (movementPattern)
         {
             case Pattern.continuous:
@@ -72,6 +83,7 @@ public class CylinderCamera : MonoBehaviour
                 break;
             case Pattern.wobble:
                 capturedImageRawImage.enabled = true;
+                displayImage.texture = CaptureRenderTexture();
                 break;
             case Pattern.luminanceMixture:
                 preImageRawImage.enabled = true;
@@ -87,61 +99,61 @@ public class CylinderCamera : MonoBehaviour
         switch (movementPattern)
         {
             case Pattern.continuous:
-                ContinuousMoveCamera();
+                Continuous();
                 break;
             case Pattern.wobble:
-                WabbleMoveCamera();
+                Wabble();
                 break;
             case Pattern.luminanceMixture:
-                LuminanceMixtureMoveCamera();
+                LuminanceMixture();
                 break;
         }
     }
-    
-    void ContinuousMoveCamera()
+    void Continuous()
+    {
+        MoveCamera();
+    }
+    void MoveCamera()
     {
         // 计算摄像机沿圆锥轴线移动的目标位置
         Vector3 direction = (cylinderTopCenter - cameraTransform.position).normalized;
         Vector3 targetPosition = cameraTransform.position + direction * cameraSpeed * Time.deltaTime;
 
         // 移动摄像机到目标位置
-        //cameraTransform.position = targetPosition;
+        cameraTransform.position = targetPosition;
         //cameraTransform.position = Vector3.Lerp(cameraTransform.position, targetPosition, cameraSpeed * Time.deltaTime);
-        cameraCurrentZPosition += captureInterval * Time.deltaTime;
+/*        cameraCurrentZPosition += captureIntervalDistance * Time.deltaTime;
         if (cameraCurrentZPosition > cylinderHeight)
         {
             cameraCurrentZPosition = cylinderHeight;
         }
-        cameraTransform.position = new Vector3(0, 0, cameraCurrentZPosition);
+        cameraTransform.position = new Vector3(0, 0, cameraCurrentZPosition);*/
         // 确保摄像机始终朝向圆锥顶点
         cameraTransform.LookAt(cylinderTopCenter);
     }
-    void WabbleMoveCamera()
+    void Wabble()
     {
-        // 检查是否到了拍照的距离
-        if (cameraCurrentZPosition >= nextCaptureZPosition)
-        {
-            Debug.Log("this is the number of the photo taken: " + captureImagesNumber);
-            captureImagesNumber++;
+        updateTimer += Time.deltaTime;
 
+        // 控制帧率更新
+        if (updateTimer >= updateInterval)
+        {
             captureCamera.transform.position = cameraTransform.position;
             captureCamera.transform.rotation = cameraTransform.rotation;
 
-            // 启用捕获摄像机
-            //captureCamera.enabled = true;
-
+            // 更新Raw Image显示的Texture
             displayImage.texture = CaptureRenderTexture();
 
-            // 禁用捕获摄像机
-            //captureCamera.enabled = false;
-            nextCaptureZPosition += captureInterval;
+            // 重置更新计时器
+            updateTimer = 0f;
         }
-        ContinuousMoveCamera();
+
+        MoveCamera();
     }
 
     void CaptureImagesAtIntervalsSave()
     {
-        for (float z = 0; z <= cylinderHeight; z += captureInterval)
+        for (float z = 0; z <= cylinderHeight; z += captureIntervalDistance)
         {
             captureCamera.transform.position = new Vector3(0, 0, z);
  
@@ -150,7 +162,7 @@ public class CylinderCamera : MonoBehaviour
         }
     }
 
-    void LuminanceMixtureMoveCamera()
+    void LuminanceMixture()
     {
         var previousImage = capturedImages[captureImagesNumber]; // 获取前一个元素
         Texture2D previousTexture = previousImage.Item1; // 获取Texture2D
@@ -164,7 +176,7 @@ public class CylinderCamera : MonoBehaviour
         float preImageToCameraCurrentDistance = Vector3.Distance(previousPosition, cameraTransform.position);
 
         //计算前一张和后一张图片的辉度值
-        float nextImageRatio = preImageToCameraCurrentDistance / captureInterval;
+        float nextImageRatio = preImageToCameraCurrentDistance / captureIntervalDistance;
         float previousImageRatio = 1.0f - nextImageRatio;
 
         // 将修改后的颜色应用到 RawImage
@@ -177,11 +189,11 @@ public class CylinderCamera : MonoBehaviour
         nextImageRawImage.transform.SetParent(canvas.transform, false);
 
         // 检查是否到了拍照的距离
-        if (cameraCurrentZPosition >= nextPosition.z) 
+        if (cameraTransform.position.z >= nextPosition.z) 
         {
             captureImagesNumber++;
         }
-        ContinuousMoveCamera();
+        MoveCamera();
     }
     Texture2D CaptureRenderTexture()
     {
