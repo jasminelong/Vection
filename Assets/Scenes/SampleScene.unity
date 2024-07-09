@@ -888,13 +888,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96311825dfd1daf44aadb18cb0398321, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  movementPattern: 0
+  movementPattern: 1
   userCamera: {fileID: 164747226}
   captureCamera: {fileID: 66995337}
   cylinderTopCenter: {x: 0, y: 0, z: 0}
-  cameraSpeed: 1
+  cameraSpeed: 0.6
   displayImage: {fileID: 562080743}
-  fps: 5
+  fps: 60
   preImageRawImage: {fileID: 870240804}
   nextImageRawImage: {fileID: 998203497}
 --- !u!114 &1241673505
@@ -911,7 +911,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dotPrefab: {fileID: 1422570904}
   newDotRadius: 0.005
-  cylinderHeight: 30
+  cylinderHeight: 50
   cylinderRadius: 0.5
   totalDotAreaRatio: 0.04
   cylinderBaseCenter: {x: 0, y: 0, z: 0}
