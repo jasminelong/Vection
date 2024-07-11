@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using System;
+using System.IO;
 
 public class CylinderCamera : MonoBehaviour
 {
@@ -35,12 +36,25 @@ public class CylinderCamera : MonoBehaviour
 
     private List<(Texture2D, Vector3)> capturedImages; // 存储图片和位置的列表
 
-    private float updateInterval; // 更新间隔，单位秒
+    public float updateInterval; // 更新间隔，单位秒
     private float updateTimer = 0f;
+ 
+    //保存数据用的字段
+    // 获取当前帧数和时间
+    public int frameNum=0;
+    public string participantName;
+    private string experimentalCondition;
+    public int trialNumber;
 
+    private List<string> data = new List<string>();
+    private float startTime;
+    private bool vectionResponse = false;
+    private string folderName = "ExperimentData"; // 子文件夹名称
+    private float timeMs ;
     // Start is called before the first frame update
     void Start()
     {
+        startTime = Time.time;
         // 关闭垂直同步
         QualitySettings.vSyncCount = 0;
         // 设置目标帧率为60帧每秒
@@ -55,6 +69,7 @@ public class CylinderCamera : MonoBehaviour
         capturedImages = new List<(Texture2D, Vector3)>();
 
         updateInterval = 1 / fps;//计算每一帧显示的间隔时间
+
         captureIntervalDistance = cameraSpeed / fps;//计算每帧直接的间隔距离
 
         // 在 Canvas 中查找指定名称的子对象
@@ -79,33 +94,62 @@ public class CylinderCamera : MonoBehaviour
         switch (movementPattern)
         {
             case Pattern.continuous:
+                // 添加数据表头
+                data.Add("FrameNum, Time [ms], Vection Response (0:no, 1: yes )");
                 userImageRawImage.enabled = true;
                 break;
             case Pattern.wobble:
+                // 添加数据表头
+                data.Add("FrameNum, Time [ms], Vection Response (0:no, 1: yes )");
                 capturedImageRawImage.enabled = true;
                 displayImage.texture = CaptureRenderTexture();
+                frameNum++;
                 break;
             case Pattern.luminanceMixture:
+                // 添加数据表头
+                data.Add("FrondFrameNum, FrondFrameLuminance, BackFrameNum, BackFrameLuminance, Time [ms], Vection Response (0:no, 1: yes )");
                 preImageRawImage.enabled = true;
                 nextImageRawImage.enabled = true;
                 CaptureImagesAtIntervalsSave();
                 break;
         }
+
+        startTime = Time.time;
+        experimentalCondition = movementPattern.ToString() + "_"
+                                                 + "cameraSpeed" + cameraSpeed.ToString() + "_"
+                                                 + "fps" + fps.ToString()
+                                                 ;
     }
 
     // Update is called once per frame
     void Update()
     {
+        timeMs = (Time.time - startTime) * 1000;
+        // 检测按键状态
+        if (Input.GetKey(KeyCode.Space))
+        {
+            vectionResponse = true;
+        }
+        else
+        {
+            vectionResponse = false;
+        }
         switch (movementPattern)
         {
             case Pattern.continuous:
+                frameNum = Time.frameCount;
                 Continuous();
+                // 记录数据
+                data.Add($"{frameNum}, {timeMs:F4}, {(vectionResponse ? 1 : 0)}");
                 break;
             case Pattern.wobble:
                 Wabble();
+                // 记录数据
+                data.Add($"{frameNum}, {timeMs:F4}, {(vectionResponse ? 1 : 0)}");
                 break;
             case Pattern.luminanceMixture:
                 LuminanceMixture();
+
                 break;
         }
     }
@@ -118,37 +162,38 @@ public class CylinderCamera : MonoBehaviour
         // 计算摄像机沿圆锥轴线移动的目标位置
         Vector3 direction = (cylinderTopCenter - cameraTransform.position).normalized;
         Vector3 targetPosition = cameraTransform.position + direction * cameraSpeed * Time.deltaTime;
-
+        float distanceToTarget = Vector3.Distance(cameraTransform.position, cylinderTopCenter);
+        if (distanceToTarget <= 0.1f)
+        {
+            QuitGame();
+        }
         // 移动摄像机到目标位置
         cameraTransform.position = targetPosition;
+      
         //cameraTransform.position = Vector3.Lerp(cameraTransform.position, targetPosition, cameraSpeed * Time.deltaTime);
-/*        cameraCurrentZPosition += captureIntervalDistance * Time.deltaTime;
-        if (cameraCurrentZPosition > cylinderHeight)
-        {
-            cameraCurrentZPosition = cylinderHeight;
-        }
-        cameraTransform.position = new Vector3(0, 0, cameraCurrentZPosition);*/
         // 确保摄像机始终朝向圆锥顶点
         cameraTransform.LookAt(cylinderTopCenter);
     }
     void Wabble()
     {
-        updateTimer += Time.deltaTime;
+        MoveCamera();
+        
 
         // 控制帧率更新
-        if (updateTimer >= updateInterval)
+        if (timeMs >= frameNum*updateInterval * 1000)
         {
             captureCamera.transform.position = cameraTransform.position;
             captureCamera.transform.rotation = cameraTransform.rotation;
 
             // 更新Raw Image显示的Texture
             displayImage.texture = CaptureRenderTexture();
-
+            
             // 重置更新计时器
             updateTimer = 0f;
-        }
 
-        MoveCamera();
+            //记录帧数
+            frameNum++;
+        }
     }
 
     void CaptureImagesAtIntervalsSave()
@@ -164,6 +209,7 @@ public class CylinderCamera : MonoBehaviour
 
     void LuminanceMixture()
     {
+        MoveCamera();
         var previousImage = capturedImages[captureImagesNumber]; // 获取前一个元素
         Texture2D previousTexture = previousImage.Item1; // 获取Texture2D
         Vector3 previousPosition = previousImage.Item2; // 获取位置
@@ -188,12 +234,16 @@ public class CylinderCamera : MonoBehaviour
         preImageRawImage.transform.SetParent(canvas.transform, false);
         nextImageRawImage.transform.SetParent(canvas.transform, false);
 
+        // 记录数据
+        data.Add($"{captureImagesNumber}, {previousImageRatio},{captureImagesNumber + 1}, {nextImageRatio},{timeMs:F4}, {(vectionResponse ? 1 : 0)}");
+
         // 检查是否到了拍照的距离
         if (cameraTransform.position.z >= nextPosition.z) 
         {
             captureImagesNumber++;
         }
-        MoveCamera();
+       
+
     }
     Texture2D CaptureRenderTexture()
     {
@@ -225,5 +275,28 @@ public class CylinderCamera : MonoBehaviour
         Destroy(rt);
 
         return capturedImage;
+    }
+    void QuitGame()
+    {
+        #if UNITY_EDITOR
+                UnityEditor.EditorApplication.isPlaying = false; // 在编辑器中停止播放模式
+        #else
+                Application.Quit(); // 在应用程序中退出应用
+        #endif
+    }
+
+    void OnApplicationQuit()
+    {
+        // 获取当前日期
+        string date = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+        // 构建文件名
+        string fileName = $"{date}_{experimentalCondition}_{participantName}_trialNumber{trialNumber}.csv";
+
+        // 保存文件（Application.dataPath：表示当前项目的Assets文件夹的路径）
+        string filePath = Path.Combine(Application.dataPath, folderName, fileName);
+        File.WriteAllLines(filePath, data);
+
+        Debug.Log($"Data saved to {filePath}");
     }
 }
