@@ -938,6 +938,7 @@ GameObject:
   - component: {fileID: 1241673503}
   - component: {fileID: 1241673505}
   - component: {fileID: 1241673504}
+  - component: {fileID: 1241673506}
   m_Layer: 0
   m_Name: CylinderSystem
   m_TagString: Untagged
@@ -972,15 +973,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96311825dfd1daf44aadb18cb0398321, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  movementPattern: 0
+  movementPattern: 1
   userCamera: {fileID: 164747226}
   captureCamera: {fileID: 66995337}
   cylinderTopCenter: {x: 0, y: 0, z: 0}
   cameraSpeed: 4
   displayImage: {fileID: 562080743}
-  fps: 60
-  preImageRawImage: {fileID: 870240804}
-  nextImageRawImage: {fileID: 998203497}
+  fps: 30
   updateInterval: 0
   frameNum: 0
   participantName: A
@@ -999,11 +998,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dotPrefab: {fileID: 470353741}
   newDotRadius: 0.1
-  cylinderHeight: 100
+  cylinderHeight: 720
   cylinderRadius: 3
   totalDotAreaRatio: 0.2
   cylinderBaseCenter: {x: 0, y: 0, z: 0}
   cylinderTopCenter: {x: 0, y: 0, z: 0}
+--- !u!114 &1241673506
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1241673501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: abde2df9797bafd459bcbdc8ab37a7e6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  initialPoolSize: 10
 --- !u!1 &1243058861
 GameObject:
   m_ObjectHideFlags: 0
