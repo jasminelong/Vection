@@ -32,6 +32,7 @@ public class CylinderCamera : MonoBehaviour
     private Transform nextImageTransform;
     private int captureImagesNumber = 0;
     private float cylinderHeight;// 圆柱的高度，m
+    private float userCameraSecondPerFrame = 1/60f;//运动相机的fps的倒数
 
 
     private List<(Texture2D, Vector3)> capturedImages; // 存储图片和位置的列表
@@ -50,7 +51,7 @@ public class CylinderCamera : MonoBehaviour
     private float startTime;
     private bool vectionResponse = false;
     private string folderName = "ExperimentData"; // 子文件夹名称
-    private float timeMs ;
+    private float timeMs ;//运行到现在的时间
     // Start is called before the first frame update
     void Start()
     {
@@ -70,7 +71,7 @@ public class CylinderCamera : MonoBehaviour
 
         updateInterval = 1 / fps;//计算每一帧显示的间隔时间
 
-        captureIntervalDistance = cameraSpeed / fps;//计算每帧直接的间隔距离
+        captureIntervalDistance = cameraSpeed / fps;//计算每帧之间的间隔距离
 
         // 在 Canvas 中查找指定名称的子对象
         canvas = GameObject.Find("Canvas");
@@ -102,8 +103,9 @@ public class CylinderCamera : MonoBehaviour
                 // 添加数据表头
                 data.Add("FrameNum, Time [ms], Vection Response (0:no, 1: yes )");
                 capturedImageRawImage.enabled = true;
-                displayImage.texture = CaptureRenderTexture();
-                frameNum++;
+                /*displayImage.texture = CaptureRenderTexture();
+                frameNum++;*/
+                CaptureImagesAtIntervalsSave();
                 break;
             case Pattern.luminanceMixture:
                 // 添加数据表头
@@ -125,6 +127,7 @@ public class CylinderCamera : MonoBehaviour
     void Update()
     {
         timeMs = (Time.time - startTime) * 1000;
+        Debug.Log("444444444444444444444444------------" + timeMs);
         // 检测按键状态
         if (Input.GetKey(KeyCode.Space))
         {
@@ -137,25 +140,23 @@ public class CylinderCamera : MonoBehaviour
         switch (movementPattern)
         {
             case Pattern.continuous:
-                frameNum = Time.frameCount;
                 Continuous();
-                // 记录数据
-                data.Add($"{frameNum}, {timeMs:F4}, {(vectionResponse ? 1 : 0)}");
                 break;
             case Pattern.wobble:
                 Wabble();
-                // 记录数据
-                data.Add($"{frameNum}, {timeMs:F4}, {(vectionResponse ? 1 : 0)}");
                 break;
             case Pattern.luminanceMixture:
                 LuminanceMixture();
 
                 break;
         }
+        MoveCamera();
     }
     void Continuous()
     {
-        MoveCamera();
+        frameNum = Time.frameCount;
+        // 记录数据
+        data.Add($"{frameNum}, {timeMs:F4}, {(vectionResponse ? 1 : 0)}");
     }
     void MoveCamera()
     {
@@ -176,26 +177,29 @@ public class CylinderCamera : MonoBehaviour
     }
     void Wabble()
     {
-        MoveCamera();
-        
-
-        // 控制帧率更新
-        if (timeMs >= frameNum*updateInterval * 1000)
+        var previousImage = capturedImages[captureImagesNumber]; // 获取一个元素
+        Texture2D previousTexture = previousImage.Item1; // 获取Texture2D
+        Vector3 previousPosition = previousImage.Item2; // 获取位置
+        //计算前一张图片到正在运动的相机的距离
+        float preImageToCameraCurrentDistance = Vector3.Distance(previousPosition, cameraTransform.position);
+        // 检查是否到了拍照的距离
+        if (preImageToCameraCurrentDistance >= captureIntervalDistance)
         {
-            captureCamera.transform.position = cameraTransform.position;
-            captureCamera.transform.rotation = cameraTransform.rotation;
-
-            // 更新Raw Image显示的Texture
-            displayImage.texture = CaptureRenderTexture();
-            
-            // 重置更新计时器
-            updateTimer = 0f;
-
-            //记录帧数
-            frameNum++;
+            captureImagesNumber++;
+            previousImage = capturedImages[captureImagesNumber]; // 获取前一个元素
+            previousTexture = previousImage.Item1; // 获取Texture2D
+            previousPosition = previousImage.Item2; // 获取位置
+            preImageToCameraCurrentDistance = Vector3.Distance(previousPosition, cameraTransform.position);
         }
+        displayImage.texture = previousTexture;
+        // 检查是否到了拍照的距离
+        if (preImageToCameraCurrentDistance >= captureIntervalDistance)
+        {
+            captureImagesNumber++;
+        }
+        // 记录数据
+        data.Add($"{captureImagesNumber}, {timeMs:F4}, {(vectionResponse ? 1 : 0)}");
     }
-
     void CaptureImagesAtIntervalsSave()
     {
         for (float z = 0; z <= cylinderHeight; z += captureIntervalDistance)
@@ -209,7 +213,6 @@ public class CylinderCamera : MonoBehaviour
 
     void LuminanceMixture()
     {
-        MoveCamera();
         var previousImage = capturedImages[captureImagesNumber]; // 获取前一个元素
         Texture2D previousTexture = previousImage.Item1; // 获取Texture2D
         Vector3 previousPosition = previousImage.Item2; // 获取位置
@@ -221,6 +224,21 @@ public class CylinderCamera : MonoBehaviour
         //计算前一张图片到正在运动的相机的距离
         float preImageToCameraCurrentDistance = Vector3.Distance(previousPosition, cameraTransform.position);
 
+        // 检查是否到了拍照的距离
+        if (preImageToCameraCurrentDistance >= captureIntervalDistance)
+        {
+            captureImagesNumber++;
+            previousImage = capturedImages[captureImagesNumber]; // 获取前一个元素
+             previousTexture = previousImage.Item1; // 获取Texture2D
+             previousPosition = previousImage.Item2; // 获取位置
+
+             nextImage = capturedImages[captureImagesNumber + 1]; // 获取后一个元素
+             nextTexture = nextImage.Item1; // 获取Texture2D
+             nextPosition = nextImage.Item2; // 获取位置
+
+            //计算前一张图片到正在运动的相机的距离
+             preImageToCameraCurrentDistance = Vector3.Distance(previousPosition, cameraTransform.position);
+        }
         //计算前一张和后一张图片的辉度值
         float nextImageRatio = preImageToCameraCurrentDistance / captureIntervalDistance;
         float previousImageRatio = 1.0f - nextImageRatio;
@@ -233,17 +251,14 @@ public class CylinderCamera : MonoBehaviour
         // 设置父对象为 Canvas，并保持原始的本地位置、旋转和缩放
         preImageRawImage.transform.SetParent(canvas.transform, false);
         nextImageRawImage.transform.SetParent(canvas.transform, false);
-
-        // 记录数据
-        data.Add($"{captureImagesNumber}, {previousImageRatio},{captureImagesNumber + 1}, {nextImageRatio},{timeMs:F4}, {(vectionResponse ? 1 : 0)}");
-
         // 检查是否到了拍照的距离
-        if (cameraTransform.position.z >= nextPosition.z) 
+        if (preImageToCameraCurrentDistance >= captureIntervalDistance)
         {
             captureImagesNumber++;
         }
-       
 
+        // 记录数据
+        data.Add($"{captureImagesNumber}, {previousImageRatio},{captureImagesNumber + 1}, {nextImageRatio},{timeMs:F4}, {(vectionResponse ? 1 : 0)}");
     }
     Texture2D CaptureRenderTexture()
     {

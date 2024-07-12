@@ -972,13 +972,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96311825dfd1daf44aadb18cb0398321, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  movementPattern: 2
+  movementPattern: 0
   userCamera: {fileID: 164747226}
   captureCamera: {fileID: 66995337}
   cylinderTopCenter: {x: 0, y: 0, z: 0}
   cameraSpeed: 4
   displayImage: {fileID: 562080743}
-  fps: 50
+  fps: 60
   preImageRawImage: {fileID: 870240804}
   nextImageRawImage: {fileID: 998203497}
   updateInterval: 0
