@@ -14,7 +14,7 @@ public class CylinderCamera : MonoBehaviour
         luminanceMixture
     }
     public Pattern movementPattern; // イメージの提示パターン // 图像提示的模式
-    public Camera userCamera; // 連続運動のカメラ // 连续运动的摄像机
+    public Camera mainCamera; // 連続運動のカメラ // 连续运动的摄像机
     public Camera captureCamera; // 一定の距離ごとに写真を撮るためのカメラ // 用于间隔一定距离拍照的摄像机
     public Vector3 cylinderTopCenter; // 円柱の頂点の中心位置 // 圆柱顶部的中心位置
     public float cameraSpeed = 1f; // カメラが円柱の軸に沿って移動する速度 (m/s) // 摄像机沿圆柱轴线移动的速度，m/s
@@ -25,19 +25,15 @@ public class CylinderCamera : MonoBehaviour
     private GameObject canvas;
     private Transform cameraTransform; // メインカメラのTransform // 主摄像机的Transform
     private Transform capturedImageTransform;
-    private Transform userImageTransform;
     private Transform preImageTransform;
     private Transform nextImageTransform;
-    private RawImage userImageRawImage;
     private RawImage capturedImageRawImage;
     private RawImage preImageRawImage;
     private RawImage nextImageRawImage ;
     private RectTransform capturedImageRect;
     private int capturedImageWidth;
     private int capturedImageHeight;
-    private int captureImagesNumber = 0;
     private float cylinderHeight; // 円柱の高さ (m) // 圆柱的高度，m
-    private float userCameraSecondPerFrame = 1 / 60f; // 運動カメラのfpsの逆数 // 运动相机的fps的倒数
 
     private List<(Texture2D, Vector3)> capturedImages; // 画像と位置を格納するリスト // 存储图片和位置的列表
 
@@ -66,8 +62,8 @@ public class CylinderCamera : MonoBehaviour
         // 目標フレームレートを60フレーム/秒に設定 // 设置目标帧率为60帧每秒
         Time.fixedDeltaTime = 1.0f / 60.0f;
 
-        userCamera.transform.position = this.GetComponent<CylinderGenerator>().cylinderBaseCenter; // カメラの初期位置を円柱の底部中心に設定 // 相机初始位置设为圆柱底部中心
-        cameraTransform = userCamera.transform; // メインカメラのTransformを取得 // 获取主摄像机的Transform
+        mainCamera.transform.position = this.GetComponent<CylinderGenerator>().cylinderBaseCenter; // カメラの初期位置を円柱の底部中心に設定 // 相机初始位置设为圆柱底部中心
+        cameraTransform = mainCamera.transform; // メインカメラのTransformを取得 // 获取主摄像机的Transform
         cylinderHeight = this.GetComponent<CylinderGenerator>().cylinderHeight;
         cylinderTopCenter = new Vector3(0f, 0f, cylinderHeight); // 円柱の頂点位置を高さの頂点に設定 // 圆柱顶部位置设为高度的顶点
 
@@ -81,10 +77,6 @@ public class CylinderCamera : MonoBehaviour
 
         switch (movementPattern)
         {
-            /*    case Pattern.continuous:
-                    data.Add("FrameNum, Time [ms], Vection Response (0:no, 1: yes )"); // データ表ヘッダを追加 // 添加数据表头
-                    userImageRawImage.enabled = true;
-                    break;*/
             case Pattern.continuous:
             case Pattern.wobble:
                 data.Add("FrameNum, Time [ms], Vection Response (0:no, 1: yes )");
@@ -120,8 +112,6 @@ public class CylinderCamera : MonoBehaviour
         switch (movementPattern)
         {
             case Pattern.continuous:
-                Continuous();
-                break;
             case Pattern.wobble:
                 Wabble();
                 break;
@@ -136,19 +126,16 @@ public class CylinderCamera : MonoBehaviour
     {
         // Canvas内で指定された名前の子オブジェクトを検索 // 在 Canvas 中查找指定名称的子对象
         canvas = GameObject.Find("Canvas");
-        userImageTransform = canvas.transform.Find("UserImage");
         capturedImageTransform = canvas.transform.Find("CapturedImage");
         preImageTransform = canvas.transform.Find("preImageRawImage");
         nextImageTransform = canvas.transform.Find("nextImageRawImage");
 
         // 子オブジェクトのRawImageコンポーネントを取得 // 获取子对象的 RawImage 组件
-         userImageRawImage = userImageTransform.GetComponent<RawImage>();
          capturedImageRawImage = capturedImageTransform.GetComponent<RawImage>();
          preImageRawImage = preImageTransform.GetComponent<RawImage>();
          nextImageRawImage = nextImageTransform.GetComponent<RawImage>();
 
         // RawImageコンポーネントを無効にする // 禁用 RawImage 组件
-        userImageRawImage.enabled = false;
         capturedImageRawImage.enabled = false;
         preImageRawImage.enabled = false;
         nextImageRawImage.enabled = false;
@@ -157,14 +144,6 @@ public class CylinderCamera : MonoBehaviour
         capturedImageRect = capturedImageTransform.GetComponent<RectTransform>();
         capturedImageWidth = (int)capturedImageRect.rect.width;
         capturedImageHeight = (int)capturedImageRect.rect.height;
-    }
-
-    void Continuous()
-    {
-        captureImagesNumber++;
-        frameNum = Time.frameCount;
-        // データを記録 // 记录数据
-        data.Add($"{frameNum}, {timeMs:F4}, {(vectionResponse ? 1 : 0)}");
     }
 
     void MoveCamera()
@@ -187,14 +166,13 @@ public class CylinderCamera : MonoBehaviour
     {
         var Image = capturedImages[frameNum]; // 画像を取得 // 获取一个元素
         Texture2D Texture = Image.Item1; // Texture2Dを取得 // 获取Texture2D
-
-        if (timeMs >= frameNum * updateInterval * 1000)
+        if (Mathf.Abs(timeMs - frameNum * updateInterval * 1000) < 0.01f)
         {
             displayImage.texture = Texture;
             frameNum++;
         }
 
-        // データを記録 // 记录数据
+        // データを記録 // 记录数据,这里是为了记录数据从1开始，所以用的frameNum而不是frameNum-1,因为list的下标是从0开始的
         data.Add($"{frameNum}, {timeMs:F4}, {(vectionResponse ? 1 : 0)}");
     }
 
@@ -209,53 +187,44 @@ public class CylinderCamera : MonoBehaviour
         }
     }
 
-void LuminanceMixture()
+    void LuminanceMixture()
     {
-        var previousImage = capturedImages[captureImagesNumber]; // 以前の画像を取得 // 获取前一个元素
-        Texture2D previousTexture = previousImage.Item1; // Texture2Dを取得 // 获取Texture2D
-        Vector3 previousPosition = previousImage.Item2; // 位置を取得 // 获取位置
-
-        var nextImage = capturedImages[captureImagesNumber + 1]; // 次の // 获取后一个元素
-        Texture2D nextTexture = nextImage.Item1; // Texture2Dを取得 // 获取Texture2D
-
-        // 以前の画像から現在のカメラまでの距離を計算 // 计算前一张图片到正在运动的相机的距离
-        float preImageToCameraCurrentDistance = Vector3.Distance(previousPosition, cameraTransform.position);
-
-        // 写真を撮る距離に達したかをチェック // 检查是否到了拍照的距离
-        if (preImageToCameraCurrentDistance >= captureIntervalDistance)
+        if (frameNum  < capturedImages.Count - 1)
         {
-            captureImagesNumber++;
-            previousImage = capturedImages[captureImagesNumber]; // 以前の画像を取得 // 获取前一个元素
-            previousTexture = previousImage.Item1; // Texture2Dを取得 // 获取Texture2D
-            previousPosition = previousImage.Item2; // 位置を取得 // 获取位置
+            // 写真を撮る距離に達したかをチェック // 检查是否到了拍照的距离
+            if (Mathf.Abs(timeMs - (frameNum+1) * updateInterval * 1000) < 0.01f )
+            {
+                frameNum++;
+            }
+            var previousImage = capturedImages[frameNum]; // 手前の画像を取得 // 获取前一个元素
+            Texture2D previousTexture = previousImage.Item1; // Texture2Dを取得 // 获取Texture2D
+            Vector3 previousPosition = previousImage.Item2; // 位置を取得 // 获取位置
 
-            nextImage = capturedImages[captureImagesNumber + 1]; // 次の // 获取后一个元素
-            nextTexture = nextImage.Item1; // Texture2Dを取得 // 获取Texture2D
+            var nextImage = capturedImages[frameNum + 1]; // 次の画像を取得 // 获取后一个元素
+            Texture2D nextTexture = nextImage.Item1; // Texture2Dを取得 // 获取Texture2D
 
-            // 以前の画像から現在のカメラまでの距離を計算 // 计算前一张图片到正在运动的相机的距离
-            preImageToCameraCurrentDistance = Vector3.Distance(previousPosition, cameraTransform.position);
+            //  手前の画像から現在のカメラまでの距離を計算 // 计算前一张图片到正在运动的相机的距离
+            float preImageToCameraCurrentDistance = Vector3.Distance(previousPosition, cameraTransform.position);
+
+            //  手前の画像と次の画像の輝度値を計算 // 计算前一张和后一张图片的辉度值
+            float nextRatio = preImageToCameraCurrentDistance / captureIntervalDistance;
+            float nextImageRatio = nextRatio > 1.0f ? 1.0f : nextRatio;
+            float previousImageRatio = 1.0f - nextImageRatio;
+
+            // 変更された色をRawImageに適用 // 将修改后的颜色应用到 RawImage
+            preImageRawImage.texture = previousTexture;
+            preImageRawImage.color = new Color(preImageRawImage.color.r, preImageRawImage.color.g, preImageRawImage.color.b, previousImageRatio);
+
+            nextImageRawImage.texture = nextTexture;
+            nextImageRawImage.color = new Color(nextImageRawImage.color.r, nextImageRawImage.color.g, nextImageRawImage.color.b, nextImageRatio);
+            // Canvasに親オブジェクトを設定し、元のローカル位置、回転、およびスケールを保持 // 设置父对象为 Canvas，并保持原始的本地位置、旋转和缩放
+            preImageRawImage.transform.SetParent(canvas.transform, false);
+            nextImageRawImage.transform.SetParent(canvas.transform, false);
+
+
+            // データを記録 // 记录数据
+            data.Add($"{frameNum+1}, {previousImageRatio:F5},{frameNum + 2}, {nextImageRatio:F5},{timeMs:F5}, {(vectionResponse ? 1 : 0)}");
         }
-        // 以前の画像と次の画像の輝度値を計算 // 计算前一张和后一张图片的辉度值
-        float nextImageRatio = preImageToCameraCurrentDistance / captureIntervalDistance;
-        float previousImageRatio = 1.0f - nextImageRatio;
-
-        // 変更された色をRawImageに適用 // 将修改后的颜色应用到 RawImage
-        preImageRawImage.texture = previousTexture;
-        preImageRawImage.color = new Color(preImageRawImage.color.r, preImageRawImage.color.g, preImageRawImage.color.b, previousImageRatio);
-
-        nextImageRawImage.texture = nextTexture;
-        nextImageRawImage.color = new Color(nextImageRawImage.color.r, nextImageRawImage.color.g, nextImageRawImage.color.b, nextImageRatio);
-        // Canvasに親オブジェクトを設定し、元のローカル位置、回転、およびスケールを保持 // 设置父对象为 Canvas，并保持原始的本地位置、旋转和缩放
-        preImageRawImage.transform.SetParent(canvas.transform, false);
-        nextImageRawImage.transform.SetParent(canvas.transform, false);
-        // 写真を撮る距離に達したかをチェック // 检查是否到了拍照的距离
-        if (preImageToCameraCurrentDistance >= captureIntervalDistance)
-        {
-            captureImagesNumber++;
-        }
-
-        // データを記録 // 记录数据
-        data.Add($"{captureImagesNumber}, {previousImageRatio},{captureImagesNumber + 1}, {nextImageRatio},{timeMs:F4}, {(vectionResponse ? 1 : 0)}");
     }
     Texture2D CaptureRenderTexture()
     {
