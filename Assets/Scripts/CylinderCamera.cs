@@ -14,22 +14,21 @@ public class CylinderCamera : MonoBehaviour
         luminanceMixture
     }
     public Pattern movementPattern; // イメージの提示パターン // 图像提示的模式
-    public Camera mainCamera; // 連続運動のカメラ // 连续运动的摄像机
+    public Camera moveCamera; // 連続運動のカメラ // 连续运动的摄像机
     public Camera captureCamera; // 一定の距離ごとに写真を撮るためのカメラ // 用于间隔一定距离拍照的摄像机
     public Vector3 cylinderTopCenter; // 円柱の頂点の中心位置 // 圆柱顶部的中心位置
     public float cameraSpeed = 1f; // カメラが円柱の軸に沿って移動する速度 (m/s) // 摄像机沿圆柱轴线移动的速度，m/s
-    public RawImage displayImage; // 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
     public float fps = 60f; // 他のfps // 其他的fps
 
     private float captureIntervalDistance; // 撮影間隔の距離 (m) // 拍摄间隔距离，m
     private GameObject canvas;
     private Transform cameraTransform; // メインカメラのTransform // 主摄像机的Transform
-    private Transform capturedImageTransform;
+    private Transform displayImageTransform;
     private Transform preImageTransform;
     private Transform nextImageTransform;
-    private RawImage capturedImageRawImage;
-    private RawImage preImageRawImage;
-    private RawImage nextImageRawImage ;
+    private RawImage displayImageRawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
+    private RawImage preImageRawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
+    private RawImage nextImageRawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
     private RectTransform capturedImageRect;
     private int capturedImageWidth;
     private int capturedImageHeight;
@@ -62,8 +61,8 @@ public class CylinderCamera : MonoBehaviour
         // 目標フレームレートを60フレーム/秒に設定 // 设置目标帧率为60帧每秒
         Time.fixedDeltaTime = 1.0f / 60.0f;
 
-        mainCamera.transform.position = this.GetComponent<CylinderGenerator>().cylinderBaseCenter; // カメラの初期位置を円柱の底部中心に設定 // 相机初始位置设为圆柱底部中心
-        cameraTransform = mainCamera.transform; // メインカメラのTransformを取得 // 获取主摄像机的Transform
+        moveCamera.transform.position = this.GetComponent<CylinderGenerator>().cylinderBaseCenter; // カメラの初期位置を円柱の底部中心に設定 // 相机初始位置设为圆柱底部中心
+        cameraTransform = moveCamera.transform; // メインカメラのTransformを取得 // 获取主摄像机的Transform
         cylinderHeight = this.GetComponent<CylinderGenerator>().cylinderHeight;
         cylinderTopCenter = new Vector3(0f, 0f, cylinderHeight); // 円柱の頂点位置を高さの頂点に設定 // 圆柱顶部位置设为高度的顶点
 
@@ -80,7 +79,7 @@ public class CylinderCamera : MonoBehaviour
             case Pattern.continuous:
             case Pattern.wobble:
                 data.Add("FrameNum, Time [ms], Vection Response (0:no, 1: yes )");
-                capturedImageRawImage.enabled = true;
+                displayImageRawImage.enabled = true;
                 CaptureImagesAtIntervalsSave();
                 break;
             case Pattern.luminanceMixture:
@@ -126,22 +125,22 @@ public class CylinderCamera : MonoBehaviour
     {
         // Canvas内で指定された名前の子オブジェクトを検索 // 在 Canvas 中查找指定名称的子对象
         canvas = GameObject.Find("Canvas");
-        capturedImageTransform = canvas.transform.Find("CapturedImage");
-        preImageTransform = canvas.transform.Find("preImageRawImage");
-        nextImageTransform = canvas.transform.Find("nextImageRawImage");
+        displayImageTransform = canvas.transform.Find("DisplayImage");
+        preImageTransform = canvas.transform.Find("PreImageRawImage");
+        nextImageTransform = canvas.transform.Find("NextImageRawImage");
 
         // 子オブジェクトのRawImageコンポーネントを取得 // 获取子对象的 RawImage 组件
-         capturedImageRawImage = capturedImageTransform.GetComponent<RawImage>();
+         displayImageRawImage = displayImageTransform.GetComponent<RawImage>();
          preImageRawImage = preImageTransform.GetComponent<RawImage>();
          nextImageRawImage = nextImageTransform.GetComponent<RawImage>();
 
         // RawImageコンポーネントを無効にする // 禁用 RawImage 组件
-        capturedImageRawImage.enabled = false;
+        displayImageRawImage.enabled = false;
         preImageRawImage.enabled = false;
         nextImageRawImage.enabled = false;
 
         // RawImageの幅と高さを取得 // 获取 RawImage 的宽高
-        capturedImageRect = capturedImageTransform.GetComponent<RectTransform>();
+        capturedImageRect = displayImageTransform.GetComponent<RectTransform>();
         capturedImageWidth = (int)capturedImageRect.rect.width;
         capturedImageHeight = (int)capturedImageRect.rect.height;
     }
@@ -166,9 +165,10 @@ public class CylinderCamera : MonoBehaviour
     {
         var Image = capturedImages[frameNum]; // 画像を取得 // 获取一个元素
         Texture2D Texture = Image.Item1; // Texture2Dを取得 // 获取Texture2D
+
         if (Mathf.Abs(timeMs - frameNum * updateInterval * 1000) < 0.01f)
         {
-            displayImage.texture = Texture;
+            displayImageRawImage.texture = Texture;
             frameNum++;
         }
 
