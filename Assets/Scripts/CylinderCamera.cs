@@ -14,15 +14,16 @@ public class CylinderCamera : MonoBehaviour
         luminanceMixture
     }
     public Pattern movementPattern; // イメージの提示パターン // 图像提示的模式
-    public Camera moveCamera; // 連続運動のカメラ // 连续运动的摄像机
+    public GameObject moveSphere; // 連続運動のカメラ // 连续运动的摄像机
     public Camera captureCamera; // 一定の距離ごとに写真を撮るためのカメラ // 用于间隔一定距离拍照的摄像机
     public Vector3 cylinderTopCenter; // 円柱の頂点の中心位置 // 圆柱顶部的中心位置
     public float cameraSpeed = 1f; // カメラが円柱の軸に沿って移動する速度 (m/s) // 摄像机沿圆柱轴线移动的速度，m/s
     public float fps = 60f; // 他のfps // 其他的fps
 
+    private float trialTime = 3 * 60 * 1000;//实验的总时间
     private float captureIntervalDistance; // 撮影間隔の距離 (m) // 拍摄间隔距离，m
     private GameObject canvas;
-    private Transform cameraTransform; // メインカメラのTransform // 主摄像机的Transform
+    private Transform moveSphereTransform; // メインカメラのTransform // 主摄像机的Transform
     private Transform displayImageTransform;
     private Transform preImageTransform;
     private Transform nextImageTransform;
@@ -61,8 +62,8 @@ public class CylinderCamera : MonoBehaviour
         // 目標フレームレートを60フレーム/秒に設定 // 设置目标帧率为60帧每秒
         Time.fixedDeltaTime = 1.0f / 60.0f;
 
-        moveCamera.transform.position = this.GetComponent<CylinderGenerator>().cylinderBaseCenter; // カメラの初期位置を円柱の底部中心に設定 // 相机初始位置设为圆柱底部中心
-        cameraTransform = moveCamera.transform; // メインカメラのTransformを取得 // 获取主摄像机的Transform
+        moveSphere.transform.position = this.GetComponent<CylinderGenerator>().cylinderBaseCenter; // カメラの初期位置を円柱の底部中心に設定 // 相机初始位置设为圆柱底部中心
+        moveSphereTransform = moveSphere.transform; // メインカメラのTransformを取得 // 获取主摄像机的Transform
         cylinderHeight = this.GetComponent<CylinderGenerator>().cylinderHeight;
         cylinderTopCenter = new Vector3(0f, 0f, cylinderHeight); // 円柱の頂点位置を高さの頂点に設定 // 圆柱顶部位置设为高度的顶点
 
@@ -118,7 +119,8 @@ public class CylinderCamera : MonoBehaviour
                 LuminanceMixture();
                 break;
         }
-        MoveCamera();
+        //MoveCamera();
+        MoveSphere();
     }
 
     void GetRawImage()
@@ -145,21 +147,21 @@ public class CylinderCamera : MonoBehaviour
         capturedImageHeight = (int)capturedImageRect.rect.height;
     }
 
-    void MoveCamera()
+ 
+    void MoveSphere()
     {
         // カメラが円柱の軸に沿って移動する目標位置を計算 // 计算摄像机沿圆锥轴线移动的目标位置
-        Vector3 direction = (cylinderTopCenter - cameraTransform.position).normalized;
-        Vector3 targetPosition = cameraTransform.position + direction * cameraSpeed * Time.deltaTime;
-        float distanceToTarget = Vector3.Distance(cameraTransform.position, cylinderTopCenter);
-        if (distanceToTarget <= 0.1f)
+        Vector3 direction = (cylinderTopCenter - moveSphereTransform.position).normalized;
+        Vector3 targetPosition = moveSphereTransform.position + direction * cameraSpeed * Time.deltaTime;
+        if (startTime >= trialTime)
         {
             QuitGame();
         }
         // カメラを目標位置に移動 // 移动摄像机到目标位置
-        cameraTransform.position = targetPosition;
+        moveSphereTransform.position = targetPosition;
 
         // カメラを常に円柱の頂点に向ける // 确保摄像机始终朝向圆锥顶点
-        cameraTransform.LookAt(cylinderTopCenter);
+        moveSphereTransform.LookAt(cylinderTopCenter);
     }
     void Wabble()
     {
@@ -204,7 +206,7 @@ public class CylinderCamera : MonoBehaviour
             Texture2D nextTexture = nextImage.Item1; // Texture2Dを取得 // 获取Texture2D
 
             //  手前の画像から現在のカメラまでの距離を計算 // 计算前一张图片到正在运动的相机的距离
-            float preImageToCameraCurrentDistance = Vector3.Distance(previousPosition, cameraTransform.position);
+            float preImageToCameraCurrentDistance = Vector3.Distance(previousPosition, moveSphereTransform.position);
 
             //  手前の画像と次の画像の輝度値を計算 // 计算前一张和后一张图片的辉度值
             float nextRatio = preImageToCameraCurrentDistance / captureIntervalDistance;

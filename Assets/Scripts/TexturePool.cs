@@ -30,7 +30,6 @@ public class TexturePool : MonoBehaviour
     // ƒv[ƒ‹‚©‚çRenderTexture‚ðŽæ“¾
     public RenderTexture GetRenderTextureFromPool(int width, int height)
     {
-        Debug.Log("11111111111111111111111111111111");
         if (renderTexturePool.Count > 0)
         {
             RenderTexture rt = renderTexturePool.Dequeue();
