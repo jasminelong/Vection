@@ -14,12 +14,14 @@ public class CylinderCamera : MonoBehaviour
         luminanceMixture
     }
     public Pattern movementPattern; // イメージの提示パターン // 图像提示的模式
-    public GameObject moveSphere; // 連続運動のカメラ // 连续运动的摄像机
     public Camera captureCamera; // 一定の距離ごとに写真を撮るためのカメラ // 用于间隔一定距离拍照的摄像机
     public Vector3 cylinderTopCenter; // 円柱の頂点の中心位置 // 圆柱顶部的中心位置
     public float cameraSpeed = 1f; // カメラが円柱の軸に沿って移動する速度 (m/s) // 摄像机沿圆柱轴线移动的速度，m/s
-    public float fps = 60f; // 他のfps // 其他的fps
+    public float framesPerSecond = 60f; // framesPerSecond // 其他的framesPerSecond
+    public bool IsCapturedImage = false;
+    public GameObject CylinderObject;
 
+    private bool isDisplayCylinder = true;
     private float trialTime = 3 * 60 * 1000;//实验的总时间
     private float captureIntervalDistance; // 撮影間隔の距離 (m) // 拍摄间隔距离，m
     private GameObject canvas;
@@ -51,8 +53,12 @@ public class CylinderCamera : MonoBehaviour
     private float startTime;
     private bool vectionResponse = false;
     private string folderName = "ExperimentData"; // サブフォルダ名 // 子文件夹名称
+    private string capturedImageFolderPath = Application.dataPath + "/CapturedImage";
     private float timeMs; // 現在までの経過時間 // 运行到现在的时间
     // Start is called before the first frame update
+
+    private bool noUseSavedImage = true;
+    private int batchSize = 100; // 每批处理的图像数量
     void Start()
     {
         startTime = Time.time;
@@ -62,16 +68,16 @@ public class CylinderCamera : MonoBehaviour
         // 目標フレームレートを60フレーム/秒に設定 // 设置目标帧率为60帧每秒
         Time.fixedDeltaTime = 1.0f / 60.0f;
 
-        moveSphere.transform.position = this.GetComponent<CylinderGenerator>().cylinderBaseCenter; // カメラの初期位置を円柱の底部中心に設定 // 相机初始位置设为圆柱底部中心
-        moveSphereTransform = moveSphere.transform; // メインカメラのTransformを取得 // 获取主摄像机的Transform
-        cylinderHeight = this.GetComponent<CylinderGenerator>().cylinderHeight;
+        //moveSphere.transform.position = this.GetComponent<CylinderGenerator>().cylinderBaseCenter; // カメラの初期位置を円柱の底部中心に設定 // 相机初始位置设为圆柱底部中心
+        //moveSphereTransform = moveSphere.transform; // メインカメラのTransformを取得 // 获取主摄像机的Transform
+        cylinderHeight = CylinderObject.GetComponent<CylinderGenerator>().cylinderHeight;
         cylinderTopCenter = new Vector3(0f, 0f, cylinderHeight); // 円柱の頂点位置を高さの頂点に設定 // 圆柱顶部位置设为高度的顶点
 
         captureCamera.enabled = false; // 初期状態でキャプチャカメラを無効にする // 初始化时禁用捕获摄像机
         capturedImages = new List<(Texture2D, Vector3)>();
 
-        updateInterval = 1 / fps; // 各フレームの表示間隔を計算 // 计算每一帧显示的间隔时间
-        captureIntervalDistance = cameraSpeed / fps; // 各フレームの間隔距離を計算 // 计算每帧之间的间隔距离
+        updateInterval = 1 / framesPerSecond; // 各フレームの表示間隔を計算 // 计算每一帧显示的间隔时间
+        captureIntervalDistance = cameraSpeed / framesPerSecond; // 各フレームの間隔距離を計算 // 计算每帧之间的间隔距离
 
         GetRawImage();
 
@@ -81,25 +87,46 @@ public class CylinderCamera : MonoBehaviour
             case Pattern.wobble:
                 data.Add("FrameNum, Time [ms], Vection Response (0:no, 1: yes )");
                 displayImageRawImage.enabled = true;
-                CaptureImagesAtIntervalsSave();
                 break;
             case Pattern.luminanceMixture:
                 data.Add("FrondFrameNum, FrondFrameLuminance, BackFrameNum, BackFrameLuminance, Time [ms], Vection Response (0:no, 1: yes )");
                 preImageRawImage.enabled = true;
                 nextImageRawImage.enabled = true;
-                CaptureImagesAtIntervalsSave();
                 break;
         }
+        if (noUseSavedImage)
+        {
+            StartCoroutine(CaptureImagesAtIntervalsSave());
+            //CaptureImagesAtIntervalsSave();
+        }else  if (IsCapturedImage)
+        {
+            StartCoroutine(CaptureImagesAtIntervalsSave());
+            //CaptureImagesAtIntervalsSave();
+            QuitGame();
+        }
+        else
+        {
+            // 从文件夹加载所有图片
+            LoadTexturesFromFolder();
+        }
+        
 
         experimentalCondition = movementPattern.ToString() + "_"
                                                  + "cameraSpeed" + cameraSpeed.ToString() + "_"
-                                                 + "fps" + fps.ToString();
+                                                 + "framesPerSecond" + framesPerSecond.ToString();
     }
 
     // Update is called once per frame
     void FixedUpdate()
     {
+        if (isDisplayCylinder)
+        {
+            // 禁用随机点对象
+            CylinderObject.SetActive(false);
+            isDisplayCylinder = false;
+        }
         timeMs = (Time.time - startTime) * 1000;
+        Debug.Log("Update called"+ timeMs);
         // キーの状態をチェック // 检测按键状态
         if (Input.GetKey(KeyCode.Space))
         {
@@ -119,8 +146,7 @@ public class CylinderCamera : MonoBehaviour
                 LuminanceMixture();
                 break;
         }
-        //MoveCamera();
-        MoveSphere();
+        //MoveSphere();
     }
 
     void GetRawImage()
@@ -153,7 +179,8 @@ public class CylinderCamera : MonoBehaviour
         // カメラが円柱の軸に沿って移動する目標位置を計算 // 计算摄像机沿圆锥轴线移动的目标位置
         Vector3 direction = (cylinderTopCenter - moveSphereTransform.position).normalized;
         Vector3 targetPosition = moveSphereTransform.position + direction * cameraSpeed * Time.deltaTime;
-        if (startTime >= trialTime)
+        float distanceToTarget = Vector3.Distance(moveSphereTransform.position, cylinderTopCenter);
+        if (startTime >= trialTime || distanceToTarget <= 0.1f)
         {
             QuitGame();
         }
@@ -167,7 +194,6 @@ public class CylinderCamera : MonoBehaviour
     {
         var Image = capturedImages[frameNum]; // 画像を取得 // 获取一个元素
         Texture2D Texture = Image.Item1; // Texture2Dを取得 // 获取Texture2D
-
         if (Mathf.Abs(timeMs - frameNum * updateInterval * 1000) < 0.01f)
         {
             displayImageRawImage.texture = Texture;
@@ -178,14 +204,27 @@ public class CylinderCamera : MonoBehaviour
         data.Add($"{frameNum}, {timeMs:F4}, {(vectionResponse ? 1 : 0)}");
     }
 
-    void CaptureImagesAtIntervalsSave()
+    IEnumerator CaptureImagesAtIntervalsSave()
     {
+        int processedImages = 0;
         for (float z = 0; z <= cylinderHeight; z += captureIntervalDistance)
         {
             captureCamera.transform.position = new Vector3(0, 0, z);
 
             // 画像と対応する位置を保存 // 保存图像及其位置
-            capturedImages.Add((CaptureRenderTexture(), captureCamera.transform.position));
+            if (noUseSavedImage)
+            {
+                capturedImages.Add((CaptureRenderTexture2(), captureCamera.transform.position));
+            }
+            else {
+                CaptureRenderTexture();
+            }
+            processedImages++;
+            if (processedImages >= batchSize)
+            {
+                yield return null; // 等待一帧以释放内存
+                processedImages = 0;
+            }
         }
     }
 
@@ -228,10 +267,12 @@ public class CylinderCamera : MonoBehaviour
             data.Add($"{frameNum+1}, {previousImageRatio:F5},{frameNum + 2}, {nextImageRatio:F5},{timeMs:F5}, {(vectionResponse ? 1 : 0)}");
         }
     }
-    Texture2D CaptureRenderTexture()
+    void CaptureRenderTexture()
     {
         // RenderTextureを作成し、キャプチャカメラのターゲットとして設定 // 创建一个RenderTexture并将其设置为捕获摄像机的目标
-        RenderTexture rt = TexturePool.Instance.GetRenderTextureFromPool(capturedImageWidth, capturedImageHeight);
+        //RenderTexture rt = TexturePool.Instance.GetRenderTextureFromPool(capturedImageWidth, capturedImageHeight);
+        RenderTexture rt = new RenderTexture(capturedImageWidth, capturedImageHeight, 24);
+
         captureCamera.targetTexture = rt;
 
         // 画像をレンダリング // 渲染图像
@@ -241,17 +282,53 @@ public class CylinderCamera : MonoBehaviour
         RenderTexture.active = rt;
 
         // 新しいTexture2Dを作成 // 创建一个新的 Texture2D
-        Texture2D capturedImage = TexturePool.Instance.GetTexture2DFromPool(rt.width, rt.height, TextureFormat.RGB24);
+        //Texture2D capturedImage = TexturePool.Instance.GetTexture2DFromPool(rt.width, rt.height, TextureFormat.RGB24);
+        Texture2D capturedImage = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
 
         // RenderTextureからピクセルデータをTexture2Dに読み込む // 从 RenderTexture 中读取像素数据到 Texture2D
         capturedImage.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
         capturedImage.Apply();
 
+        // 确保文件夹存在
+        if (!Directory.Exists(capturedImageFolderPath))
+        {
+            Directory.CreateDirectory(capturedImageFolderPath);
+        }
+
+        // 生成文件名
+        string fileName = captureCamera.transform.position.z  + ".png";
+        string filePath = Path.Combine(capturedImageFolderPath, fileName);
+
+        // 保存PNG文件
+        byte[] bytes = capturedImage.EncodeToPNG();
+        File.WriteAllBytes(filePath, bytes);
+
         // 解放 // 释放
         captureCamera.targetTexture = null;
         RenderTexture.active = null;
-        TexturePool.Instance.ReturnRenderTextureToPool(rt);
-        return capturedImage;
+        //TexturePool.Instance.ReturnRenderTextureToPool(rt);
+        rt.Release();
+        Destroy(rt);
+        Destroy(capturedImage);
+        System.GC.Collect();
+        Resources.UnloadUnusedAssets();
+    }
+    void LoadTexturesFromFolder()
+    {
+        // 获取所有PNG文件
+        string[] files = Directory.GetFiles(capturedImageFolderPath, "*.png");
+        foreach (string file in files)
+        {
+            // 获取文件名，不包括扩展名
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
+            Vector3 positionZ = new Vector3(0, 0, (float)Math.Round(float.Parse(fileNameWithoutExtension),4));
+            // 加载每个文件为Texture2D
+            byte[] fileData = File.ReadAllBytes(file);
+            Texture2D texture = new Texture2D(2, 2);
+            texture.LoadImage(fileData); // 加载图像数据
+
+            capturedImages.Add((texture, positionZ));
+        }
     }
     void QuitGame()
     {
@@ -275,5 +352,35 @@ public class CylinderCamera : MonoBehaviour
         File.WriteAllLines(filePath, data);
 
         Debug.Log($"Data saved to {filePath}");
+    }
+    Texture2D CaptureRenderTexture2()
+    {
+        // RenderTextureを作成し、キャプチャカメラのターゲットとして設定 // 创建一个RenderTexture并将其设置为捕获摄像机的目标
+        RenderTexture rt = TexturePool.Instance.GetRenderTextureFromPool(capturedImageWidth, capturedImageHeight);
+        //RenderTexture rt = new RenderTexture(capturedImageWidth, capturedImageHeight, 24);
+        captureCamera.targetTexture = rt;
+
+        // 画像をレンダリング // 渲染图像
+        captureCamera.Render();
+
+        // RenderTextureをアクティブ化 // 激活 RenderTexture
+        RenderTexture.active = rt;
+
+        // 新しいTexture2Dを作成 // 创建一个新的 Texture2D
+        Texture2D capturedImage = TexturePool.Instance.GetTexture2DFromPool(rt.width, rt.height, TextureFormat.RGB24);
+        //Texture2D capturedImage = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
+
+        // RenderTextureからピクセルデータをTexture2Dに読み込む // 从 RenderTexture 中读取像素数据到 Texture2D
+        capturedImage.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+        capturedImage.Apply();
+ 
+        // 解放 // 释放
+        captureCamera.targetTexture = null;
+        RenderTexture.active = null;
+        //rt.Release();
+        //Destroy(rt);
+        TexturePool.Instance.ReturnRenderTextureToPool(rt);
+
+        return capturedImage;
     }
 }

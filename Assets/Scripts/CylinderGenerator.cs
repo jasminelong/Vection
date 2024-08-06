@@ -17,7 +17,7 @@ public class CylinderGenerator : MonoBehaviour
     public Vector3 cylinderTopCenter; // 圆柱顶部的中心位置
 
     private List<GameObject> dotPool = new List<GameObject>(); // 对象池
-
+    private bool isDisplay = true;
     void Start()
     {
         cylinderTopCenter = new Vector3(0f, 0f, cylinderHeight); // 圆柱顶部位置设为高度的顶点
@@ -27,8 +27,6 @@ public class CylinderGenerator : MonoBehaviour
 
     void Update()
     {
-        
-
     }
 
     void GenerateDots()
