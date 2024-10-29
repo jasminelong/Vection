@@ -17,12 +17,23 @@ public class CylinderGenerator : MonoBehaviour
     public Vector3 cylinderTopCenter; // 圆柱顶部的中心位置
 
     private List<GameObject> dotPool = new List<GameObject>(); // 对象池
+    private List<Vector3> savedDotPositions = new List<Vector3>(); // 保存生成的小圆点位置
     private bool isDisplay = true;
     void Start()
     {
         cylinderTopCenter = new Vector3(0f, 0f, cylinderHeight); // 圆柱顶部位置设为高度的顶点
 
-        GenerateDots();
+        // 检查是否已保存圆点位置，如果没有，则生成新的
+        if (savedDotPositions.Count == 0)
+        {
+            GenerateDots();
+        }
+        else
+        {
+            // 使用保存的位置生成小圆点
+            PlaceDotsAtSavedPositions();
+        }
+
     }
 
     void Update()
@@ -37,6 +48,9 @@ public class CylinderGenerator : MonoBehaviour
             Destroy(dot);
         }
         dotPool.Clear();
+
+        // 清空已保存的圆点位置
+        savedDotPositions.Clear();
 
         // 计算圆柱的侧面积
         float surfaceArea = 2 * Mathf.PI * cylinderRadius * cylinderHeight;
@@ -76,6 +90,9 @@ public class CylinderGenerator : MonoBehaviour
             // 在计算出的位置上实例化白色小圆点预制体
             Vector3 position = new Vector3(x, y, height);
 
+            // 保存生成的小圆点位置
+            savedDotPositions.Add(position);
+
             // 从对象池中获取或新建小圆点对象
             GameObject dot;
             if (dotPool.Count > i)
@@ -107,5 +124,40 @@ public class CylinderGenerator : MonoBehaviour
             dotPool[i].SetActive(false);
         }
     }
-   
+    void PlaceDotsAtSavedPositions()
+    {
+        // 使用保存的圆点位置重新生成小圆点
+        for (int i = 0; i < savedDotPositions.Count; i++)
+        {
+            Vector3 position = savedDotPositions[i];
+
+            GameObject dot;
+            if (dotPool.Count > i)
+            {
+                dot = dotPool[i];
+                dot.SetActive(true);
+                dot.transform.position = position;
+            }
+            else
+            {
+                dot = Instantiate(dotPrefab, position, Quaternion.identity);
+                dot.transform.SetParent(transform);
+                dotPool.Add(dot);
+            }
+
+            // 计算小圆点朝向圆柱表面的旋转
+            Vector3 bposition = new Vector3(position.x, position.y, 0);
+            Vector3 surfaceNormal = (bposition - cylinderBaseCenter).normalized;
+            Quaternion rotation = Quaternion.LookRotation(surfaceNormal, Vector3.up);
+            dot.transform.rotation = rotation;
+        }
+
+        // 隐藏多余的圆点
+        for (int i = savedDotPositions.Count; i < dotPool.Count; i++)
+        {
+            dotPool[i].SetActive(false);
+        }
+    }
+
+
 }
