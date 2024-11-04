@@ -20,7 +20,7 @@ public class CylinderCamera : MonoBehaviour
     public float cameraSpeed = 1f; // カメラが円柱の軸に沿って移動する速度 (m/s) // 摄像机沿圆柱轴线移动的速度，m/s
     public float fps = 60f; // 他のfps // 其他的fps
 
-    private float trialTime = 3 * 60 * 1000;//实验的总时间
+    private float trialTime = 3 * 60 * 1000f;//实验的总时间
     private float captureIntervalDistance; // 撮影間隔の距離 (m) // 拍摄间隔距离，m
     private GameObject canvas;
     private Transform cameraTransform; // メインカメラのTransform // 主摄像机的Transform
@@ -54,7 +54,8 @@ public class CylinderCamera : MonoBehaviour
     private float timeMs; // 現在までの経過時間 // 运行到现在的时间
     private int preFrameNum = 0;
     private Vector3 direction;
-
+    private float bufferDurTime = 10200f;
+    public Image grayImage;
     // Start is called before the first frame update
     void Start()
     {
@@ -64,8 +65,8 @@ public class CylinderCamera : MonoBehaviour
         // 目標フレームレートを60フレーム/秒に設定 // 设置目标帧率为60帧每秒
         Time.fixedDeltaTime = 1.0f / 60.0f;
         //userCamera.transform.position = new Vector3(0f, 0f, 0f) ; // カメラの初期位置を円柱の底部中心に設定 // 相机初始位置设为圆柱底部中心
-        //cameraTransform = userCamera.transform; // メインカメラのTransformを取得 // 获取主摄像机的Transform
-        cylinderTopCenter = new Vector3(0f, 0f, 800f); // 円柱の頂点位置を高さの頂点に設定 // 圆柱顶部位置设为高度的顶点
+        //cameraTransform = userCame111111ra.transform; // メインカメラのTransformを取得 // 获取主摄像机的Transform
+        cylinderTopCenter = new Vector3(0f, 0f, 1400f); // 円柱の頂点位置を高さの頂点に設定 // 圆柱顶部位置设为高度的顶点
 
        // captureCamera.enabled = false; // 初期状態でキャプチャカメラを無効にする // 初始化时禁用捕获摄像机
         capturedImages = new List<(Texture2D, Vector3)>();
@@ -78,6 +79,8 @@ public class CylinderCamera : MonoBehaviour
         switch (movementPattern)
         {
             case Pattern.continuous:
+                data.Add("FrameNum, Time, Vection Response");
+                break;
             case Pattern.wobble:
                 data.Add("FrameNum, Time [ms], Vection Response (0:no, 1: yes )");
                 displayImageRawImage.enabled = true;
@@ -94,8 +97,14 @@ public class CylinderCamera : MonoBehaviour
         experimentalCondition = movementPattern.ToString() + "_"
                                                  + "cameraSpeed" + cameraSpeed.ToString() + "_"
                                                  + "fps" + fps.ToString();
+        StartCoroutine(ShowGrayScreen(bufferDurTime/1000));
     }
-
+    IEnumerator ShowGrayScreen(float duration)
+    {
+        grayImage.gameObject.SetActive(true);  // 激活灰色背景
+        yield return new WaitForSeconds(duration);
+        grayImage.gameObject.SetActive(false); // 隐藏灰色背景
+    }
     // Update is called once per frame
     void FixedUpdate()
     {
@@ -153,9 +162,17 @@ public class CylinderCamera : MonoBehaviour
 
     void MoveCamera()
     {
-        if (timeMs >= trialTime)
+        if (timeMs >= (trialTime+2* bufferDurTime))
         {
             QuitGame();
+        }
+        if (timeMs >= bufferDurTime)
+        {
+            displayImageRawImage.enabled = true;
+        }
+        if (timeMs >= (bufferDurTime + trialTime))
+        {
+            displayImageRawImage.enabled = false;
         }
         // カメラが円柱の軸に沿って移動する目標位置を計算 // 计算摄像机沿圆锥轴线移动的目标位置
         Vector3 targetPosition = captureCamera.transform.position + direction * cameraSpeed * Time.deltaTime;
@@ -166,7 +183,7 @@ public class CylinderCamera : MonoBehaviour
         captureCamera.transform.LookAt(cylinderTopCenter);
         frameNum++;
         // データを記録 // 记录数据,这里是为了记录数据从1开始，所以用的frameNum而不是frameNum-1,因为list的下标是从0开始的
-        data.Add($"{frameNum}, {timeMs:F4}, {(vectionResponse ? 1 : 0)}");
+        data.Add($"{frameNum}, {timeMs- bufferDurTime:F4}, {(vectionResponse ? 1 : 0)}");
     }
     void Wabble()
     {
@@ -185,7 +202,7 @@ public class CylinderCamera : MonoBehaviour
 
     void CaptureImagesAtIntervalsSave()
     {
-        for (float z = 0; z <= 800; z += captureIntervalDistance)
+        for (float z = 0; z <=1400 ; z += captureIntervalDistance)
         {
             captureCamera.transform.position = new Vector3(0, 0, z);
 
