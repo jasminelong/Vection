@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the CSV file into a DataFrame
-file_path = 'D:/unity/Vection/Assets/ExperimentData/20241030_143226_continuous_cameraSpeed4_fps60_G_trialNumber2.csv'  # 请替换为你的实际文件路径
+file_path = 'D:/unity/Vection/Assets/ExperimentData/20241105_180723_continuous_cameraSpeed4_fps60_I_trialNumber1.csv'  # 请替换为你的实际文件路径
 df = pd.read_csv(file_path)
 print(df);
 # Extract 'Time' and 'Vection Response' columns
@@ -44,7 +44,7 @@ plt.text(0.95, 0.8, f'Total Time (Response=1): {total_duration_1:.2f} s',
          bbox=dict(facecolor='white', alpha=0.5))
 
 # Annotate the first occurrence of Vection Response equal to 1 on the plot
-plt.axvline(x=first_occurrence_time, color='r', linestyle='--', label=f'First Response=1 at {first_occurrence_time:.2f} ms')
+plt.axvline(x=first_occurrence_time, color='r', linestyle='--', label=f'First Response=1 at {first_occurrence_time:.2f} s')
 plt.legend()
 
 # Display the plot

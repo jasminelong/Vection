@@ -1281,7 +1281,7 @@ MonoBehaviour:
   fps: 60
   updateInterval: 0
   frameNum: 0
-  participantName: e
+  participantName: O
   trialNumber: 3
   grayImage: {fileID: 1313103653}
 --- !u!1 &1953046889
