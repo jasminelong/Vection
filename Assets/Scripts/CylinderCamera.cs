@@ -28,6 +28,7 @@ public class CylinderCamera : MonoBehaviour
     private Transform displayImageTransform;
     private Transform preImageTransform;
     private Transform nextImageTransform;
+    public Transform maskTransform;
     private RawImage displayImageRawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
     private RawImage preImageRawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
     private RawImage nextImageRawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
@@ -52,6 +53,7 @@ public class CylinderCamera : MonoBehaviour
     private float timeMs; // 現在までの経過時間 // 运行到现在的时间
     private Vector3 direction;
     private float bufferDurTime = 10200f;
+    //private float bufferDurTime = 0f;
     public Image grayImage;
     // Start is called before the first frame update
     void Start()
@@ -70,7 +72,7 @@ public class CylinderCamera : MonoBehaviour
         captureIntervalDistance = cameraSpeed / fps; // 各フレームの間隔距離を計算 // 计算每帧之间的间隔距离
          direction = (cylinderTopCenter - captureCamera.transform.position).normalized;
          GetRawImage();
-
+        maskTransform.gameObject.SetActive(false);
         switch (movementPattern)
         {
             case Pattern.continuous:
@@ -104,6 +106,7 @@ public class CylinderCamera : MonoBehaviour
     void FixedUpdate()
     {
         timeMs = (Time.time - startTime) * 1000;
+
         // キーの状態をチェック // 检测按键状态
         if (Input.GetKey(KeyCode.Keypad1))
         {     
@@ -157,6 +160,7 @@ public class CylinderCamera : MonoBehaviour
         else if (timeMs >= bufferDurTime && timeMs <= (bufferDurTime + trialTime))
         {
             displayImageRawImage.enabled = true;
+            maskTransform.gameObject.SetActive(true);
             // カメラが円柱の軸に沿って移動する目標位置を計算 // 计算摄像机沿圆锥轴线移动的目标位置
             Vector3 targetPosition = captureCamera.transform.position + direction * cameraSpeed * Time.deltaTime;
             // カメラを目標位置に移動 // 移动摄像机到目标位置
@@ -171,11 +175,13 @@ public class CylinderCamera : MonoBehaviour
         else if (timeMs > (bufferDurTime + trialTime) && timeMs <= (trialTime + 2 * bufferDurTime))
         {
             displayImageRawImage.enabled = false;
+            maskTransform.gameObject.SetActive(false);
             StartCoroutine(ShowGrayScreen(bufferDurTime / 1000));
             data.Add($"0, {timeMs - bufferDurTime:F5}, {(vectionResponse ? 1 : 0)}");
         }
         else if (timeMs > (trialTime + 2 * bufferDurTime))
         {
+            data.Add($"0, {timeMs - bufferDurTime:F5}, {(vectionResponse ? 1 : 0)}");
             QuitGame();
         }
     }
@@ -195,8 +201,10 @@ public class CylinderCamera : MonoBehaviour
         {
             preImageRawImage.enabled = true;
             nextImageRawImage.enabled = true;
+            maskTransform.gameObject.SetActive(true);
             // 写真を撮る距離に達したかをチェック // 检查是否到了拍照的距离
-            if (Mathf.Abs((timeMs - bufferDurTime) - (frameNum + 1) * updateInterval * 1000) < 0.01f)
+            Debug.Log("frameNum--"+ frameNum +"dt------" + Mathf.Abs(timeMs - bufferDurTime - frameNum * updateInterval * 1000));
+            if (Mathf.Abs((timeMs - bufferDurTime) - frameNum * updateInterval * 1000) < 0.1f)
             {
                 // カメラが円柱の軸に沿って移動する目標位置を計算 // 计算摄像机沿圆锥轴线移动的目标位置
                 Vector3 targetPosition = direction * cameraSpeed * updateInterval;
@@ -215,10 +223,6 @@ public class CylinderCamera : MonoBehaviour
             float nextRatio = preImageToNowDeltaTime / (updateInterval * 1000);
             float nextImageRatio = nextRatio > 1.0f ? 1.0f : nextRatio;
             float previousImageRatio = 1.0f - nextImageRatio;
-            /*Color preImageColor = preImageRawImage.color;
-            preImageColor.a = previousImageRatio;
-            Color nextImageColor = preImageRawImage.color;
-            nextImageColor.a = nextImageRatio;*/
             preImageRawImage.color = new Color(preImageRawImage.color.r, preImageRawImage.color.g, preImageRawImage.color.b, previousImageRatio);
             nextImageRawImage.color = new Color(nextImageRawImage.color.r, nextImageRawImage.color.g, nextImageRawImage.color.b, nextImageRatio);
             // Canvasに親オブジェクトを設定し、元のローカル位置、回転、およびスケールを保持 // 设置父对象为 Canvas，并保持原始的本地位置、旋转和缩放
@@ -233,12 +237,14 @@ public class CylinderCamera : MonoBehaviour
         {
             preImageRawImage.enabled = false;
             nextImageRawImage.enabled = false;
+            maskTransform.gameObject.SetActive(false);
             StartCoroutine(ShowGrayScreen(bufferDurTime / 1000));
-            // データを記録 // 记录数据
+            // データを記録 // 记录数
             data.Add($"0, 0, 0, 0, {timeMs - bufferDurTime:F5}, {(vectionResponse ? 1 : 0)}");
         }
         else if (timeMs > (trialTime + 2 * bufferDurTime))
         {
+            data.Add($"0, 0, 0, 0, {timeMs - bufferDurTime:F5}, {(vectionResponse ? 1 : 0)}");
             QuitGame();
         }
     }
