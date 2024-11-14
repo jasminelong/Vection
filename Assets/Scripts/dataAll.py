@@ -2,9 +2,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load data from three CSV files (replace 'file_path_X.csv' with your actual file paths)
-file_paths = ['D:/unity/Vection/Assets/ExperimentData/20241030_134518_continuous_cameraSpeed4_fps60_G_trialNumber0.csv', 
-              'D:/unity/Vection/Assets/ExperimentData/20241030_141113_continuous_cameraSpeed4_fps60_G_trialNumber1.csv', 
-              'D:/unity/Vection/Assets/ExperimentData/20241030_143226_continuous_cameraSpeed4_fps60_G_trialNumber2.csv']
+file_paths = ['D:/unity/Vection/Assets/ExperimentData/20241113_154414_luminanceMixture_cameraSpeed4_fps5_G_trialNumber1.csv',
+              'D:/unity/Vection/Assets/ExperimentData/20241113_155123_luminanceMixture_cameraSpeed4_fps5_G_trialNumber2.csv',
+              'D:/unity/Vection/Assets/ExperimentData/20241113_155817_luminanceMixture_cameraSpeed4_fps5_G_trialNumber3.csv']
 first_occurrence_times = []
 total_durations_1 = []
 
@@ -13,8 +13,8 @@ for file_path in file_paths:
     df = pd.read_csv(file_path)
 
     # Extract 'Time' and 'Vection Response' columns
-    time = df.iloc[:, 1]  # Second column as Time
-    vection_response = df.iloc[:, 2]  # Third column as Vection Response
+    time = df['Time']/1000  # Second column as Time
+    vection_response = df['Vection Response']  # Third column as Vection Response
 
     # Calculate the first occurrence of Vection Response equal to 1
     first_occurrence_index = vection_response[vection_response == 1].index[0]
@@ -43,8 +43,8 @@ ax2.bar([i + bar_width for i in x], total_durations_1, bar_width, label='Total D
 
 # Adding labels, title, and legend
 ax1.set_xlabel('Experiments')
-ax1.set_ylabel('First Occurrence Time (ms)', color='b')
-ax2.set_ylabel('Total Duration (Response=1) (ms)', color='g')
+ax1.set_ylabel('First Occurrence Time (s)', color='b')
+ax2.set_ylabel('Total Duration (Response=1) (s)', color='g')
 plt.title('First Occurrence Time and Total Duration of Vection Response=1')
 
 ax1.set_xticks([i + bar_width / 2 for i in x])
