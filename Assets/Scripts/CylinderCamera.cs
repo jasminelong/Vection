@@ -76,14 +76,14 @@ public class CylinderCamera : MonoBehaviour
         switch (movementPattern)
         {
             case Pattern.continuous:
-                data.Add("FrameNum, Time, Vection Response");
+                data.Add("FrameNum,Time,Vection Response");
                 break;
             case Pattern.wobble:
-                data.Add("FrameNum, Time [ms], Vection Response (0:no, 1: yes )");
+                data.Add("FrameNum,Time,Vection Response");
                 displayImageRawImage.enabled = true;
                 break;
             case Pattern.luminanceMixture:
-                data.Add("FrondFrameNum, FrondFrameLuminance, BackFrameNum, BackFrameLuminance, Time, Vection Response");
+                data.Add("FrondFrameNum,FrondFrameLuminance,BackFrameNum,BackFrameLuminance,Time,Vection Response");
                 frameNum++;
                 preImageRawImage.enabled = true;
                 nextImageRawImage.enabled = true;

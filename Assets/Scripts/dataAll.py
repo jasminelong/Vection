@@ -56,3 +56,5 @@ fig.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
 # Display the plot
 plt.grid()
 plt.show()
+
+
