@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the CSV file into a DataFrame
-file_path = 'D:/unity/Vection/Assets/ExperimentData/20241113_155817_luminanceMixture_cameraSpeed4_fps5_G_trialNumber3.csv'  # 请替换为你的实际文件路径
+file_path = 'D:/unity/Vection/Assets/ExperimentData/20241113_155123_luminanceMixture_cameraSpeed4_fps5_G_trialNumber2.csv'  # 请替换为你的实际文件路径
 df = pd.read_csv(file_path)
 
 # Extract data from the DataFrame
@@ -42,11 +42,15 @@ for i in range(len(frond_frame_num)):
         frond_frame_luminance[i] = temp_back_frame_luminance
 
 # Create the figure and axes for plotting
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True, gridspec_kw={'hspace': 0.3})
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 5), sharex=True, gridspec_kw={'hspace': 0.3})
 
 # Plot Frond Frame Luminance and Back Frame Luminance on the first subplot
 ax1.plot(time, frond_frame_luminance, linestyle='-', color='b', label='Frond Frame Luminance', alpha=0.5)
 ax1.plot(time, back_frame_luminance, linestyle='-', color='g', label='Back Frame Luminance', alpha=0.5)
+
+# Plot points on the line for Frond Frame Luminance and Back Frame Luminance
+ax1.scatter(time, frond_frame_luminance, color='b', s=3, alpha=0.4)
+ax1.scatter(time, back_frame_luminance, color='g', s=3, alpha=0.4)
 
 # Set labels for luminance
 ax1.set_ylabel('Luminance Value (0-1)')
@@ -54,7 +58,7 @@ ax1.set_title('Luminance Value vs Time')
 ax1.legend(loc='upper right')
 ax1.grid()
 # Limit x-axis to 10 seconds
-ax1.set_xlim([20, 25])
+ax1.set_xlim([-5, 15])
  
 # Plot Vection Response on the second subplot
 ax2.plot(time, vection_response, linestyle='-', color='r', label='Vection Response', alpha=0.7)
@@ -66,13 +70,12 @@ ax2.set_yticks([0, 1])
 ax2.legend(loc='upper right')
 ax2.grid()
 # Limit x-axis to 10 seconds
-ax2.set_xlim([20, 25])
+ax2.set_xlim([-5, 15])
 # Set x-axis limit to include the full range of time
-#ax1.set_xlim([time.min(), time.max()])
+# ax1.set_xlim([time.min(), time.max()])
 
 # Set x-axis ticks to evenly divide from 0 to 180 by 30
-#plt.xticks(ticks=[i for i in range(0, 181, 30)])
-
+# plt.xticks(ticks=[i for i in range(0, 181, 30)])
 
 # Annotate important points
 # Annotate the initial and final time points
