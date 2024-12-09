@@ -1353,12 +1353,12 @@ MonoBehaviour:
   captureCamera2: {fileID: 31168512}
   cylinderTopCenter: {x: 0, y: 0, z: 0}
   cameraSpeed: 4
-  fps: 30
+  fps: 5
   maskTransform: {fileID: 433784602}
   updateInterval: 0
   frameNum: 0
-  participantName: K
-  trialNumber: 3
+  participantName: B
+  trialNumber: 1
   grayImage: {fileID: 1313103653}
 --- !u!1 &1953046889
 GameObject:

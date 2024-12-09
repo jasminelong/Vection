@@ -84,178 +84,125 @@ luminance_mixture_paths = {
     ]
 }
 
-# Process the files to compute latent time and duration time for each participant
+# Initialize dictionaries for storing latent and duration times
 participant_latent_times = {}
 participant_duration_times = {}
 
+# Process continuous vection files
 for file_path in file_paths:
-    participant_name = file_path.split('_')[5]
+    participant_name = file_path.split('_')[5]  # Extract participant identifier
     if participant_name not in participant_latent_times:
         participant_latent_times[participant_name] = []
         participant_duration_times[participant_name] = []
-    
+
+    # Load the data
     df = pd.read_csv(file_path)
     time = df['Time'] / 1000  # Convert time to seconds
     vection_response = df['Vection Response']
-    
-    # Calculate latent time: time of first occurrence of 1
+
+    # Calculate latent time
     if (vection_response == 1).any():
         first_occurrence_index = vection_response[vection_response == 1].index[0]
         latent_time = time[first_occurrence_index]
     else:
-        latent_time = 'no'
-        duration_time = 0
-    
-    # Calculate duration time: total time where response is 1
-    if latent_time != 'no':
-        time_diff = time.diff().fillna(0)
-        duration_time = time_diff[vection_response == 1].sum()
-    
+        latent_time = np.nan  # Mark as NaN if no vection occurs
+
+    # Calculate duration time
+    time_diff = time.diff().fillna(0)
+    duration_time = time_diff[vection_response == 1].sum() if latent_time is not np.nan else 0
+
     # Store the data
     participant_latent_times[participant_name].append(latent_time)
     participant_duration_times[participant_name].append(duration_time)
 
-# Calculate average latent time for each participant
-avg_latent_times = {
-    participant: np.mean([t for t in participant_latent_times[participant] if t != 'no']) if len([t for t in participant_latent_times[participant] if t != 'no']) > 0 else 'no'
-    for participant in participant_latent_times
-}
-avg_duration_times = {
-    participant: np.mean(participant_duration_times[participant])
-    for participant in participant_duration_times
-}
-combined_latent_time = np.mean([t for t in avg_latent_times.values() if t != 'no']) if len([t for t in avg_latent_times.values() if t != 'no']) > 0 else 'no'
-combined_duration_time = np.mean(list(avg_duration_times.values()))
-combined_latent_std = np.std([t for t in avg_latent_times.values() if t != 'no']) if len([t for t in avg_latent_times.values() if t != 'no']) > 1 else 0
-combined_duration_std = np.std(list(avg_duration_times.values()))
+# Compute average and standard deviation
+avg_latent_times = {p: np.nanmean(participant_latent_times[p]) for p in participant_latent_times}
+avg_duration_times = {p: np.mean(participant_duration_times[p]) for p in participant_duration_times}
+std_latent_times = {p: np.nanstd(participant_latent_times[p]) for p in participant_latent_times}
+std_duration_times = {p: np.std(participant_duration_times[p]) for p in participant_duration_times}
 
-# Process luminance mixture conditions
+# Process luminance mixture files
 luminance_latent_times = {}
 luminance_duration_times = {}
-luminance_latent_times_std = {}
-luminance_duration_times_std = {}
 
 for condition, paths in luminance_mixture_paths.items():
     participant_latent_times = {}
     participant_duration_times = {}
     
     for file_path in paths:
-        participant_name = file_path.split('_')[5]
+        participant_name = file_path.split('_')[5]  # Extract participant identifier
+        if participant_name not in participant_latent_times:
+            participant_latent_times[participant_name] = []
+            participant_duration_times[participant_name] = []
+
+        # Load the data
         df = pd.read_csv(file_path)
-        time = df['Time'] / 1000  # Convert time to seconds
+        time = df['Time'] / 1000
         vection_response = df['Vection Response']
-        
-        # Calculate latent time: time of first occurrence of 1
+
+        # Calculate latent time
         if (vection_response == 1).any():
             first_occurrence_index = vection_response[vection_response == 1].index[0]
             latent_time = time[first_occurrence_index]
         else:
-            latent_time = 'no'
-            duration_time = 0
-        
-        # Calculate duration time: total time where response is 1
-        if latent_time != 'no':
-            time_diff = time.diff().fillna(0)
-            duration_time = time_diff[vection_response == 1].sum()
-        
-        if participant_name not in participant_latent_times:
-            participant_latent_times[participant_name] = []
-            participant_duration_times[participant_name] = []
-        
+            latent_time = np.nan
+
+        # Calculate duration time
+        time_diff = time.diff().fillna(0)
+        duration_time = time_diff[vection_response == 1].sum() if latent_time is not np.nan else 0
+
         participant_latent_times[participant_name].append(latent_time)
         participant_duration_times[participant_name].append(duration_time)
     
+    # Store average values for each condition
     luminance_latent_times[condition] = [
-        np.mean([t for t in participant_latent_times[participant] if t != 'no']) if len([t for t in participant_latent_times[participant] if t != 'no']) > 0 else 'no'
-        for participant in participant_latent_times
+        np.nanmean(participant_latent_times[p]) for p in participant_latent_times
     ]
     luminance_duration_times[condition] = [
-        np.mean(participant_duration_times[participant])
-        for participant in participant_duration_times
-    ]
-    # Calculate standard deviation
-    luminance_latent_times_std[condition] = [
-        np.std([t for t in participant_latent_times[participant] if t != 'no']) if len([t for t in participant_latent_times[participant] if t != 'no']) > 0 else 0
-        for participant in participant_latent_times
-    ]
-    luminance_duration_times_std[condition] = [
-        np.std(participant_duration_times[participant]) if len(participant_duration_times[participant]) > 0 else 0
-        for participant in participant_duration_times
+        np.mean(participant_duration_times[p]) for p in participant_duration_times
     ]
 
-# Plot latent times and duration times as scatter plots with error bars
+# Plot results
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
-# Set colors for consistency with provided image
-scatter_color_1 = '#ea7d8a'  # Light red for participants
-scatter_color_2 = '#2a8190'  # Teal for conditions
-errorbar_color = '#08bcc8'  # Dark blue for error bars
-
-# Latent time scatter plot with error bars
-fps_labels = ['No Luminance Mixture\n(60 Frames Control)', 'Luminance Mixture\n(5 Frames)', 'Luminance Mixture\n(10 Frames)', 'Luminance Mixture\n(30 Frames)']
 x_positions = [10, 40, 70, 100]
+fps_labels = ['No Luminance Mixture\n(60 fps)', '5 fps', '10 fps', '30 fps']
 
-# Scatter points for each participant's average latent times
-ax1.scatter([x_positions[0]] * len(avg_latent_times), [t for t in avg_latent_times.values() if t != 'no'], color=scatter_color_1, alpha=0.8, label='', marker='o')
-for condition, x_pos in zip(luminance_mixture_paths.keys(), x_positions[1:]):
-    condition_latent_times = [t for t in luminance_latent_times[condition] if t != 'no']
-    if len(condition_latent_times) > 0:
-        x_offsets = np.linspace(-0.5, 0.5, len(condition_latent_times))
-        for i, offset in enumerate(x_offsets):
-            ax1.scatter(x_pos + offset, condition_latent_times[i], color=scatter_color_2, alpha=0.8, label='', marker='^', s=80)
+# Scatter plot for latent times
+for i, (condition, x_pos) in enumerate(zip(['No Luminance Mixture'] + list(luminance_mixture_paths.keys()), x_positions)):
+    if i == 0:  # Control condition
+        ax1.scatter([x_pos] * len(avg_latent_times), list(avg_latent_times.values()), color='blue', alpha=0.7, label='Participants')
+    else:
+        ax1.scatter([x_pos] * len(luminance_latent_times[condition]), luminance_latent_times[condition], color='orange', alpha=0.7)
 
-# Error bars for average latent time per condition
-all_latent_times_avg = [combined_latent_time] + [
-    np.mean([t for t in luminance_latent_times[condition] if t != 'no']) if len([t for t in luminance_latent_times[condition] if t != 'no']) > 0 else 'no'
-    for condition in luminance_mixture_paths.keys()
-]
-all_latent_std = [combined_latent_std] + [
-    np.std([t for t in luminance_latent_times[condition] if t != 'no']) if len([t for t in luminance_latent_times[condition] if t != 'no']) > 0 else 0
-    for condition in luminance_mixture_paths.keys()
-]
-ax1.errorbar(x_positions, all_latent_times_avg, yerr=all_latent_std, fmt='o-', color=errorbar_color, alpha=0.6, capsize=5, linewidth=2.5, label='')
+ax1.errorbar(x_positions, 
+             [np.nanmean(list(avg_latent_times.values()))] + [np.nanmean(luminance_latent_times[c]) for c in luminance_mixture_paths.keys()],
+             yerr=[np.nanstd(list(avg_latent_times.values()))] + [np.nanstd(luminance_latent_times[c]) for c in luminance_mixture_paths.keys()],
+             fmt='o-', color='red', capsize=5)
 
-ax1.set_ylabel('Vection Latency (s)')
- 
+ax1.set_title('Vection Latent Times')
+ax1.set_ylabel('Time (s)')
 ax1.set_xticks(x_positions)
 ax1.set_xticklabels(fps_labels)
-ax1.grid(axis='y')
+ax1.grid()
 
-# Duration time scatter plot with error bars
-# Scatter points for each participant's average duration times
-ax2.scatter([x_positions[0]] * len(avg_duration_times), list(avg_duration_times.values()), color=scatter_color_1, alpha=0.8, marker='o')
-for condition, x_pos in zip(luminance_mixture_paths.keys(), x_positions[1:]):
-    condition_duration_times = luminance_duration_times[condition]
-    if len(condition_duration_times) > 0:
-        x_offsets = np.linspace(-0.5, 0.5, len(condition_duration_times))
-        for i, offset in enumerate(x_offsets):
-            ax2.scatter(x_pos + offset, condition_duration_times[i], color=scatter_color_2, alpha=0.8, marker='^', s=80)
+# Scatter plot for duration times
+for i, (condition, x_pos) in enumerate(zip(['No Luminance Mixture'] + list(luminance_mixture_paths.keys()), x_positions)):
+    if i == 0:  # Control condition
+        ax2.scatter([x_pos] * len(avg_duration_times), list(avg_duration_times.values()), color='blue', alpha=0.7, label='Participants')
+    else:
+        ax2.scatter([x_pos] * len(luminance_duration_times[condition]), luminance_duration_times[condition], color='orange', alpha=0.7)
 
-# Error bars for average duration time per condition
-all_duration_times_avg = [combined_duration_time] + [
-    np.mean(luminance_duration_times[condition]) for condition in luminance_mixture_paths.keys()
-]
-all_duration_std = [combined_duration_std] + [
-    np.std(luminance_duration_times[condition]) if len(luminance_duration_times[condition]) > 0 else 0
-    for condition in luminance_mixture_paths.keys()
-]
-ax2.errorbar(x_positions, all_duration_times_avg, yerr=all_duration_std, fmt='o-', color=errorbar_color, alpha=0.6, capsize=5, linewidth=2.5)
+ax2.errorbar(x_positions, 
+             [np.mean(list(avg_duration_times.values()))] + [np.mean(luminance_duration_times[c]) for c in luminance_mixture_paths.keys()],
+             yerr=[np.std(list(avg_duration_times.values()))] + [np.std(luminance_duration_times[c]) for c in luminance_mixture_paths.keys()],
+             fmt='o-', color='red', capsize=5)
 
-ax2.set_ylabel('Vection Duration (s)')
- 
+ax2.set_title('Vection Duration Times')
+ax2.set_ylabel('Time (s)')
 ax2.set_xticks(x_positions)
 ax2.set_xticklabels(fps_labels)
-ax2.grid(axis='y')
+ax2.grid()
 
-# Add thick horizontal lines at 0 and 180 seconds
-ax1.axhline(0, color='black', linewidth=1)
-ax1.axhline(180, color='black', linewidth=1)
-ax1.set_yticks([0, 60, 120, 180])
-
-ax2.axhline(0, color='black', linewidth=1)
-ax2.axhline(180, color='black', linewidth=1)
-ax2.set_yticks([0, 60, 120, 180])
-
-# Show plot
 plt.tight_layout()
 plt.show()

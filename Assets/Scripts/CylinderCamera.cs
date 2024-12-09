@@ -80,7 +80,7 @@ public class CylinderCamera : MonoBehaviour
                 break;
             case Pattern.wobble:
                 data.Add("FrameNum,Time,Vection Response");
-                displayImageRawImage.enabled = true;
+                frameNum++;
                 break;
             case Pattern.luminanceMixture:
                 data.Add("FrondFrameNum,FrondFrameLuminance,BackFrameNum,BackFrameLuminance,Time,Vection Response");
@@ -187,8 +187,41 @@ public class CylinderCamera : MonoBehaviour
     }
     void Wabble()
     {
-        // データを記録 // 记录数据,这里是为了记录数据从1开始，所以用的frameNum而不是frameNum-1,因为list的下标是从0开始的
-        data.Add($"{frameNum}, {timeMs:F4}, {(vectionResponse ? 1 : 0)}");
+        if (timeMs < bufferDurTime)
+        {
+            // データを記録 // 记录数据
+            data.Add($"0, {timeMs - bufferDurTime:F5}, {(vectionResponse ? 1 : 0)}");
+        }
+        else if (timeMs >= bufferDurTime && timeMs <= (bufferDurTime + trialTime))
+        {
+            displayImageRawImage.enabled = true;
+            maskTransform.gameObject.SetActive(true);
+            if (Mathf.Abs(timeMs - bufferDurTime - frameNum * updateInterval * 1000) < 0.01f)
+            {
+                frameNum++;
+                // カメラが円柱の軸に沿って移動する目標位置を計算 // 计算摄像机沿圆锥轴线移动的目标位置
+                Vector3 targetPosition = captureCamera.transform.position + direction * cameraSpeed * updateInterval;
+                // カメラを目標位置に移動 // 移动摄像机到目标位置
+                captureCamera.transform.position = targetPosition;
+                // カメラを常に円柱の頂点に向ける // 确保摄像机始终朝向圆锥顶点
+                captureCamera.transform.LookAt(cylinderTopCenter);
+            }
+            
+            // データを記録 // 记录数据,这里是为了记录数据从1开始，所以用的frameNum而不是frameNum-1,因为list的下标是从0开始的
+            data.Add($"{frameNum}, {timeMs - bufferDurTime:F4}, {(vectionResponse ? 1 : 0)}");
+        }
+        else if (timeMs > (bufferDurTime + trialTime) && timeMs <= (trialTime + 2 * bufferDurTime))
+        {
+            displayImageRawImage.enabled = false;
+            maskTransform.gameObject.SetActive(false);
+            StartCoroutine(ShowGrayScreen(bufferDurTime / 1000));
+            data.Add($"0, {timeMs - bufferDurTime:F5}, {(vectionResponse ? 1 : 0)}");
+        }
+        else if (timeMs > (trialTime + 2 * bufferDurTime))
+        {
+            data.Add($"0, {timeMs - bufferDurTime:F5}, {(vectionResponse ? 1 : 0)}");
+            QuitGame();
+        }
     }
     void LuminanceMixture()
     {
