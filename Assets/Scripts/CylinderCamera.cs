@@ -18,23 +18,26 @@ public class CylinderCamera : MonoBehaviour
         forward,
         right
     }
-    public Pattern movementPattern; // イメージの提示パターン // 图像提示的模式
-    public DirectionPattern directionPattern; // イメージの提示パターン // 图像提示的模式
+    
     public Camera userCamera; // 連続運動のカメラ // 连续运动的摄像机
     public Camera captureCamera1; // 一定の距離ごとに写真を撮るためのカメラ // 用于间隔一定距离拍照的摄像机
     public Camera captureCamera2; // 一定の距離ごとに写真を撮るためのカメラ // 用于间隔一定距离拍照的摄像机
     public Vector3 cylinderTopCenter; // 円柱の頂点の中心位置 // 圆柱顶部的中心位置
     public float cameraSpeed = 2f; // カメラが円柱の軸に沿って移動する速度 (m/s) // 摄像机沿圆柱轴线移动的速度，m/s
-    public float fps = 60f; // 他のfps // 其他的fps
+
     public GameObject CylinderSystem;
     public GameObject RectangleWithDots;
     public Image grayImage;
+    public Transform maskTransform;
+    public Image VerticalBar;
+    public Image HorizontalBar;
+
     private float trialTime = 1 * 60 * 1000f;//实验的总时间
     private float captureIntervalDistance; // 撮影間隔の距離 (m) // 拍摄间隔距离，m
     private GameObject canvas;
     private Transform preImageTransform;
     private Transform nextImageTransform;
-    public Transform maskTransform;
+
     private RawImage preImageRawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
     private RawImage nextImageRawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
 
@@ -46,6 +49,9 @@ public class CylinderCamera : MonoBehaviour
     public string participantName;
     private string experimentalCondition;
     public int trialNumber;
+    public float fps = 60f; // 他のfps // 其他的fps
+    public Pattern movementPattern; // イメージの提示パターン // 图像提示的模式
+    public DirectionPattern directionPattern; // イメージの提示パターン // 图像提示的模式
 
     private List<string> data = new List<string>();
     private float startTime;
@@ -54,7 +60,7 @@ public class CylinderCamera : MonoBehaviour
     private float timeMs; // 現在までの経過時間 // 运行到现在的时间
     private Vector3 direction;
     private float bufferDurTime = 10000f;
-    //private float bufferDurTime = 0f;
+  //  private float bufferDurTime = 0f;
   
     // Start is called before the first frame update
     private Quaternion rightMoveRotation = Quaternion.Euler(0, 90f, 0);
@@ -81,10 +87,14 @@ public class CylinderCamera : MonoBehaviour
             case DirectionPattern.forward:
                 direction = worldForwardDirection; ;
                 CylinderSystem.SetActive(true);
+                VerticalBar.gameObject.SetActive(false);
+                HorizontalBar.gameObject.SetActive(false);
                 captureCamera2.transform.rotation = Quaternion.Euler(0, 0, 0);
                 captureCamera1.transform.rotation = Quaternion.Euler(0, 0, 0);
                 break;
             case DirectionPattern.right:
+                VerticalBar.gameObject.SetActive(true);
+                HorizontalBar.gameObject.SetActive(true);  
                 RectangleWithDots.SetActive(true);
                 direction = worldRightDirection;
                 captureCamera2.transform.rotation = Quaternion.Euler(0, 90f, 0);
@@ -126,7 +136,7 @@ public class CylinderCamera : MonoBehaviour
         timeMs = (Time.time - startTime) * 1000;
 
         // キーの状態をチェック // 检测按键状态
-        if (Input.GetKey(KeyCode.Keypad1))
+        if (Input.GetKey(KeyCode.Alpha1))
         {     
             vectionResponse = true;
         }                   

@@ -5,8 +5,8 @@ public class RectangleWithDots : MonoBehaviour
 {
     public float width = 25f; // 矩形短边宽度（米）
     public float length = 600f; // 矩形长边长度（米）
-    public float density = 0.03f; // 点密度
-    public float newDotRadius = 0.15f; // 小圆点目标半径（米）
+    public float density = 0.02f; // 点密度
+    public float newDotRadius = 0.05f; // 小圆点目标半径（米）
     public GameObject dotPrefab; // 小圆点的预制体，必须包含 SpriteRenderer
     public Transform parentObject; // 父对象，用于挂载小白点
 
@@ -58,7 +58,7 @@ public class RectangleWithDots : MonoBehaviour
         {
             float y = Random.Range(-width / 2, width / 2); // Y 轴范围
             float z = Random.Range(-length / 2, length / 2); // Z 轴范围
-            precomputedPositions.Add(new Vector3(6.45f, y, z)); // 点在 Y-Z 平面上
+            precomputedPositions.Add(new Vector3(10f, y, z)); // 点在 Y-Z 平面上
         }
     }
 
