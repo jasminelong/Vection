@@ -105,6 +105,9 @@ public class CylinderCamera : MonoBehaviour
         {
             case Pattern.continuous:
                 data.Add("FrameNum,Time,Vection Response");
+                experimentalCondition = movementPattern.ToString() + "_"
+                                         + "cameraSpeed" + cameraSpeed.ToString() + "_"
+                                         + "fps60";
                 break;
             case Pattern.wobble:
                 data.Add("FrameNum,Time,Vection Response");
@@ -116,12 +119,13 @@ public class CylinderCamera : MonoBehaviour
                 preImageRawImage.enabled = true;
                 nextImageRawImage.enabled = true;
                 captureCamera2.transform.position = new Vector3(0f, 0f , captureIntervalDistance);
+                experimentalCondition = movementPattern.ToString() + "_"
+                                         + "cameraSpeed" + cameraSpeed.ToString() + "_"
+                                         + "fps" + fps.ToString();
                 break;
         }
 
-        experimentalCondition = movementPattern.ToString() + "_"
-                                                 + "cameraSpeed" + cameraSpeed.ToString() + "_"
-                                                 + "fps" + fps.ToString();
+
         StartCoroutine(ShowGrayScreen(bufferDurTime/1000));
     }
     IEnumerator ShowGrayScreen(float duration)

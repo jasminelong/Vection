@@ -1319,10 +1319,10 @@ MonoBehaviour:
   HorizontalBar: {fileID: 733257306}
   updateInterval: 0
   frameNum: 0
-  participantName: A
-  trialNumber: 2
-  fps: 5
-  movementPattern: 2
+  participantName: E
+  trialNumber: 3
+  fps: 60
+  movementPattern: 0
   directionPattern: 1
 --- !u!1 &1953046889
 GameObject:
@@ -1615,7 +1615,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_UiScaleMode: 2
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 2234, y: 2234}
